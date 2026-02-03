@@ -5,23 +5,87 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --navy: #1A1A2E;
+  --navy-dark: #0F0F1A;
+  --navy-light: #2A2A4E;
+  --accent: #E94560;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Search highlight */
+.search-highlight {
+  background-color: #fef08a;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+/* Document type badges */
+.badge {
+  @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+}
+
+.badge-email {
+  @apply bg-blue-100 text-blue-800;
+}
+
+.badge-court {
+  @apply bg-purple-100 text-purple-800;
+}
+
+.badge-fbi {
+  @apply bg-red-100 text-red-800;
+}
+
+.badge-photo {
+  @apply bg-green-100 text-green-800;
+}
+
+.badge-video {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.badge-transcript {
+  @apply bg-orange-100 text-orange-800;
+}
+
+.badge-other {
+  @apply bg-gray-100 text-gray-800;
+}
+
+/* Card styles */
+.card {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow;
+}
+
+.card-hover {
+  @apply hover:border-accent hover:shadow-lg;
+}
+
+/* Ad placeholder styles */
+.ad-placeholder {
+  @apply bg-gray-100 border border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-sm;
 }

@@ -11,6 +11,15 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        navy: {
+          DEFAULT: "#1A1A2E",
+          dark: "#0F0F1A",
+          light: "#2A2A4E",
+        },
+        accent: {
+          DEFAULT: "#E94560",
+          hover: "#D13550",
+        },
       },
     },
   },

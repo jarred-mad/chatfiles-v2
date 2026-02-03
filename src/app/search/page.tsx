@@ -1,0 +1,426 @@
+'use client';
+
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import Link from 'next/link';
+import SearchBar from '@/components/ui/SearchBar';
+import AdSlot from '@/components/ui/AdSlot';
+
+interface SearchResult {
+  id: string;
+  filename: string;
+  dataset_number: number;
+  document_type: string;
+  text_content: string;
+  ocr_confidence: number;
+  page_count: number;
+  mentioned_names: string[];
+  _formatted?: {
+    text_content?: string;
+  };
+}
+
+interface SearchResponse {
+  results: SearchResult[];
+  total: number;
+  page: number;
+  totalPages: number;
+  processingTimeMs: number;
+}
+
+const DOCUMENT_TYPES = [
+  { value: '', label: 'All Types' },
+  { value: 'email', label: 'Emails' },
+  { value: 'court_doc', label: 'Court Documents' },
+  { value: 'fbi_report', label: 'FBI Reports' },
+  { value: 'transcript', label: 'Transcripts' },
+  { value: 'photo', label: 'Photos' },
+  { value: 'video', label: 'Videos' },
+  { value: 'other', label: 'Other' },
+];
+
+const DATASETS = [8, 9, 10, 11, 12];
+
+const SORT_OPTIONS = [
+  { value: 'relevance', label: 'Relevance' },
+  { value: 'dataset', label: 'Dataset' },
+  { value: 'filename', label: 'Filename' },
+  { value: 'confidence', label: 'OCR Confidence' },
+];
+
+function SearchContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const query = searchParams.get('q') || '';
+  const type = searchParams.get('type') || '';
+  const datasets = searchParams.get('datasets')?.split(',').map(Number) || [];
+  const sort = searchParams.get('sort') || 'relevance';
+  const page = parseInt(searchParams.get('page') || '1', 10);
+
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [processingTime, setProcessingTime] = useState(0);
+
+  // Filters state
+  const [selectedType, setSelectedType] = useState(type);
+  const [selectedDatasets, setSelectedDatasets] = useState<number[]>(datasets);
+  const [selectedSort, setSelectedSort] = useState(sort);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Fetch search results
+  useEffect(() => {
+    if (!query) {
+      setResults([]);
+      setTotal(0);
+      return;
+    }
+
+    const fetchResults = async () => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          q: query,
+          page: String(page),
+          limit: '20',
+          sort: selectedSort,
+        });
+        if (selectedType) params.set('type', selectedType);
+        if (selectedDatasets.length > 0) {
+          params.set('datasets', selectedDatasets.join(','));
+        }
+
+        const res = await fetch(`/api/search?${params}`);
+        if (res.ok) {
+          const data: SearchResponse = await res.json();
+          setResults(data.results);
+          setTotal(data.total);
+          setTotalPages(data.totalPages);
+          setProcessingTime(data.processingTimeMs);
+        }
+      } catch (error) {
+        console.error('Search error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchResults();
+  }, [query, page, selectedType, selectedDatasets, selectedSort]);
+
+  const updateUrl = (newParams: Record<string, string>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(newParams).forEach(([key, value]) => {
+      if (value) {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+    });
+    params.set('page', '1'); // Reset to first page on filter change
+    router.push(`/search?${params.toString()}`);
+  };
+
+  const toggleDataset = (ds: number) => {
+    const newDatasets = selectedDatasets.includes(ds)
+      ? selectedDatasets.filter((d) => d !== ds)
+      : [...selectedDatasets, ds];
+    setSelectedDatasets(newDatasets);
+    updateUrl({ datasets: newDatasets.join(',') });
+  };
+
+  const getTypeBadgeClass = (docType: string) => {
+    const classes: Record<string, string> = {
+      email: 'badge-email',
+      court_doc: 'badge-court',
+      fbi_report: 'badge-fbi',
+      photo: 'badge-photo',
+      video: 'badge-video',
+      transcript: 'badge-transcript',
+    };
+    return classes[docType] || 'badge-other';
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Search Header */}
+      <div className="bg-white border-b border-gray-200 py-6">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="max-w-2xl">
+            <SearchBar initialQuery={query} placeholder="Search documents..." />
+          </div>
+          {query && (
+            <div className="mt-4 flex items-center gap-4 text-sm text-gray-500">
+              <span>
+                {total.toLocaleString()} results for &quot;{query}&quot;
+              </span>
+              <span>({processingTime}ms)</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* Filters Sidebar */}
+          <aside className="w-full lg:w-64 flex-shrink-0">
+            {/* Mobile filter toggle */}
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="lg:hidden w-full flex items-center justify-between p-4 bg-white rounded-lg shadow-sm mb-4"
+            >
+              <span className="font-medium">Filters</span>
+              <svg
+                className={`w-5 h-5 transition-transform ${showFilters ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            <div className={`space-y-6 ${showFilters ? 'block' : 'hidden lg:block'}`}>
+              {/* Document Type Filter */}
+              <div className="bg-white rounded-lg shadow-sm p-4">
+                <h3 className="font-semibold text-gray-900 mb-3">Document Type</h3>
+                <select
+                  value={selectedType}
+                  onChange={(e) => {
+                    setSelectedType(e.target.value);
+                    updateUrl({ type: e.target.value });
+                  }}
+                  className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                >
+                  {DOCUMENT_TYPES.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Dataset Filter */}
+              <div className="bg-white rounded-lg shadow-sm p-4">
+                <h3 className="font-semibold text-gray-900 mb-3">Data Set</h3>
+                <div className="space-y-2">
+                  {DATASETS.map((ds) => (
+                    <label key={ds} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedDatasets.includes(ds)}
+                        onChange={() => toggleDataset(ds)}
+                        className="rounded border-gray-300 text-accent focus:ring-accent"
+                      />
+                      <span className="text-sm">Dataset {ds}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sort */}
+              <div className="bg-white rounded-lg shadow-sm p-4">
+                <h3 className="font-semibold text-gray-900 mb-3">Sort By</h3>
+                <select
+                  value={selectedSort}
+                  onChange={(e) => {
+                    setSelectedSort(e.target.value);
+                    updateUrl({ sort: e.target.value });
+                  }}
+                  className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                >
+                  {SORT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Ad slot */}
+              <AdSlot size="sidebar" id="search-sidebar" className="hidden lg:block" />
+            </div>
+          </aside>
+
+          {/* Results */}
+          <main className="flex-1">
+            {loading ? (
+              <div className="space-y-4">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="bg-white rounded-lg shadow-sm p-6 animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-gray-100 rounded w-1/4 mb-4"></div>
+                    <div className="space-y-2">
+                      <div className="h-3 bg-gray-100 rounded"></div>
+                      <div className="h-3 bg-gray-100 rounded w-5/6"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : results.length === 0 ? (
+              <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                {query ? (
+                  <>
+                    <svg
+                      className="w-16 h-16 text-gray-300 mx-auto mb-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No results found</h3>
+                    <p className="text-gray-500 mb-4">
+                      We couldn&apos;t find any documents matching &quot;{query}&quot;
+                    </p>
+                    <div className="text-sm text-gray-400">
+                      <p>Suggestions:</p>
+                      <ul className="list-disc list-inside mt-2">
+                        <li>Check your spelling</li>
+                        <li>Try different keywords</li>
+                        <li>Remove some filters</li>
+                      </ul>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="w-16 h-16 text-gray-300 mx-auto mb-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                      />
+                    </svg>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Start searching</h3>
+                    <p className="text-gray-500">
+                      Enter a search term to find documents
+                    </p>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {results.map((result, index) => (
+                  <div key={result.id}>
+                    <Link
+                      href={`/documents/${result.id}`}
+                      className="block bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 truncate hover:text-accent">
+                            {result.filename}
+                          </h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`badge ${getTypeBadgeClass(result.document_type)}`}>
+                              {result.document_type.replace('_', ' ')}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              Dataset {result.dataset_number}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {result.page_count} pages
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 flex-shrink-0">
+                          <span className="text-xs text-gray-400">
+                            {Math.round(result.ocr_confidence * 100)}% OCR
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Excerpt */}
+                      <div
+                        className="mt-3 text-sm text-gray-600 line-clamp-3"
+                        dangerouslySetInnerHTML={{
+                          __html:
+                            result._formatted?.text_content?.substring(0, 300) ||
+                            result.text_content?.substring(0, 300) + '...',
+                        }}
+                      />
+
+                      {/* Mentioned names */}
+                      {result.mentioned_names && result.mentioned_names.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-1">
+                          {result.mentioned_names.slice(0, 5).map((name) => (
+                            <span
+                              key={name}
+                              className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded"
+                            >
+                              {name}
+                            </span>
+                          ))}
+                          {result.mentioned_names.length > 5 && (
+                            <span className="text-xs text-gray-400">
+                              +{result.mentioned_names.length - 5} more
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </Link>
+
+                    {/* Ad every 5th result on mobile */}
+                    {(index + 1) % 5 === 0 && (
+                      <div className="my-4 flex justify-center lg:hidden">
+                        <AdSlot size="incontent" id={`search-inline-${index}`} />
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex justify-center items-center gap-2 pt-6">
+                    <button
+                      onClick={() => updateUrl({ page: String(page - 1) })}
+                      disabled={page === 1}
+                      className="px-4 py-2 rounded-md border border-gray-300 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-sm text-gray-500">
+                      Page {page} of {totalPages}
+                    </span>
+                    <button
+                      onClick={() => updateUrl({ page: String(page + 1) })}
+                      disabled={page === totalPages}
+                      className="px-4 py-2 rounded-md border border-gray-300 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-navy"></div>
+      </div>
+    }>
+      <SearchContent />
+    </Suspense>
+  );
+}
