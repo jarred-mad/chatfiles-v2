@@ -51,6 +51,19 @@ export default function AboutPage() {
               All documents are official public records released by the U.S. government
               and are available for public inspection.
             </p>
+            <p className="mt-4">
+              <a
+                href="https://www.justice.gov/epstein"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-accent hover:text-accent-hover font-medium"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                View Official DOJ Source (justice.gov/epstein)
+              </a>
+            </p>
           </section>
 
           {/* How We Process Files */}
@@ -120,6 +133,36 @@ export default function AboutPage() {
                   </p>
                 </div>
               </div>
+            </div>
+          </section>
+
+          {/* DOJ Privacy Notice */}
+          <section id="doj-notice" className="bg-amber-50 border border-amber-300 rounded-lg p-6 md:p-8">
+            <div className="flex items-start gap-3 mb-4">
+              <svg className="w-6 h-6 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <h2 className="text-xl font-bold text-amber-900">Privacy Notice (from DOJ)</h2>
+            </div>
+            <div className="space-y-4 text-amber-900">
+              <p>
+                In view of the Congressional deadline, all reasonable efforts have been made to review
+                and redact personal information pertaining to victims, other private individuals, and
+                protect sensitive materials from disclosure.
+              </p>
+              <p>
+                That said, because of the volume of information involved, this website may nevertheless
+                contain information that inadvertently includes <strong>non-public personally identifiable
+                information</strong> or other <strong>sensitive content, including matters of a sexual nature</strong>.
+              </p>
+              <p>
+                In the event a member of the public identifies any information that should not have been
+                posted, please notify the DOJ immediately at{' '}
+                <a href="mailto:EFTA@usdoj.gov" className="text-amber-700 font-semibold underline hover:text-amber-800">
+                  EFTA@usdoj.gov
+                </a>
+                {' '}so they can take steps to correct the problem as soon as possible.
+              </p>
             </div>
           </section>
 

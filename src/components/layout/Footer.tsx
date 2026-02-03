@@ -3,6 +3,25 @@ import Link from 'next/link';
 export default function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-400">
+      {/* Privacy Notice Banner */}
+      <div className="bg-amber-900/30 border-b border-amber-800/50">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div className="text-sm">
+              <p className="text-amber-200 font-medium mb-1">Privacy Notice</p>
+              <p className="text-amber-100/80 leading-relaxed">
+                These documents may contain non-public personally identifiable information or sensitive content, including matters of a sexual nature.
+                If you identify information that should not have been posted, please notify the DOJ at{' '}
+                <a href="mailto:EFTA@usdoj.gov" className="text-amber-300 hover:text-amber-200 underline">EFTA@usdoj.gov</a>.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* About */}
@@ -12,6 +31,17 @@ export default function Footer() {
               A searchable archive of publicly released U.S. government documents
               from the Department of Justice Epstein disclosure. All documents
               hosted are official public records.
+            </p>
+            <p className="text-xs mt-3 text-gray-500">
+              Source:{' '}
+              <a
+                href="https://www.justice.gov/epstein"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent hover:underline"
+              >
+                justice.gov/epstein
+              </a>
             </p>
           </div>
 
@@ -67,6 +97,14 @@ export default function Footer() {
                   Contact Us
                 </a>
               </li>
+              <li>
+                <a
+                  href="mailto:EFTA@usdoj.gov"
+                  className="hover:text-white transition-colors"
+                >
+                  Report Content Issue (DOJ)
+                </a>
+              </li>
             </ul>
           </div>
         </div>
@@ -81,6 +119,14 @@ export default function Footer() {
             <Link href="/about#privacy" className="hover:text-white transition-colors">
               Privacy Policy
             </Link>
+            <a
+              href="https://www.justice.gov/epstein"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors"
+            >
+              Official DOJ Source
+            </a>
           </div>
         </div>
       </div>
