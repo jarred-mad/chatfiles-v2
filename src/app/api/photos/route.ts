@@ -1,73 +1,122 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { query } from '@/lib/database';
 
-// Mock photo data
-const mockPhotos = Array.from({ length: 100 }, (_, i) => ({
-  id: `photo_${i + 1}`,
-  document_id: `doc_${Math.floor(i / 5) + 1}`,
-  document_filename: `Document_${Math.floor(i / 5) + 1}.pdf`,
-  page_number: (i % 10) + 1,
-  image_path_r2: `/images/DataSet_${8 + (i % 5)}/photo_${i + 1}.png`,
-  width: 600 + Math.floor(Math.random() * 400),
-  height: 400 + Math.floor(Math.random() * 400),
-  has_faces: i % 4 === 0,
-  dataset_number: 8 + (i % 5),
-  faces: i % 4 === 0 ? [
-    {
-      id: `face_${i}_1`,
-      cluster_id: `cluster_${(i % 6) + 1}`,
-      cluster_label: i % 6 < 3 ? ['Jeffrey Epstein', 'Ghislaine Maxwell', 'Prince Andrew'][i % 3] : null,
-      bounding_box: { x: 100, y: 50, width: 120, height: 150 },
-      confidence: 0.85 + Math.random() * 0.1,
-    }
-  ] : [],
-}));
+interface ImageRow {
+  id: string;
+  document_id: string;
+  document_filename: string;
+  page_number: number | null;
+  image_path_r2: string | null;
+  width: number | null;
+  height: number | null;
+  has_faces: boolean;
+  dataset_number: number;
+  face_count: string;
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
 
   const page = parseInt(searchParams.get('page') || '1', 10);
-  const limit = parseInt(searchParams.get('limit') || '50', 10);
+  const limit = Math.min(parseInt(searchParams.get('limit') || '24', 10), 100);
   const dataset = searchParams.get('dataset');
-  const person = searchParams.get('person'); // cluster_id
-  const documentId = searchParams.get('document');
   const hasFaces = searchParams.get('has_faces');
+  const documentId = searchParams.get('document');
 
-  let results = [...mockPhotos];
+  const offset = (page - 1) * limit;
 
-  // Filter by dataset
-  if (dataset) {
-    const dsNum = parseInt(dataset, 10);
-    results = results.filter((p) => p.dataset_number === dsNum);
-  }
+  try {
+    // Build WHERE clause
+    const conditions: string[] = [];
+    const params: (string | number)[] = [];
+    let paramIndex = 1;
 
-  // Filter by document
-  if (documentId) {
-    results = results.filter((p) => p.document_id === documentId);
-  }
+    if (dataset) {
+      conditions.push(`d.dataset_number = $${paramIndex}`);
+      params.push(parseInt(dataset, 10));
+      paramIndex++;
+    }
 
-  // Filter by person (cluster)
-  if (person) {
-    results = results.filter((p) =>
-      p.faces.some((f) => f.cluster_id === person)
+    if (hasFaces === 'true') {
+      conditions.push(`ei.has_faces = true`);
+    }
+
+    if (documentId) {
+      conditions.push(`ei.document_id = $${paramIndex}`);
+      params.push(documentId);
+      paramIndex++;
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Get total count
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM extracted_images ei
+      JOIN documents d ON ei.document_id = d.id
+      ${whereClause}
+    `;
+    const countResult = await query<{ total: string }>(countQuery, params);
+    const total = parseInt(countResult[0]?.total || '0', 10);
+
+    // Get images with document info
+    const imagesQuery = `
+      SELECT
+        ei.id,
+        ei.document_id,
+        d.filename as document_filename,
+        ei.page_number,
+        ei.image_path_r2,
+        ei.width,
+        ei.height,
+        ei.has_faces,
+        d.dataset_number,
+        (SELECT COUNT(*) FROM faces f WHERE f.image_id = ei.id) as face_count
+      FROM extracted_images ei
+      JOIN documents d ON ei.document_id = d.id
+      ${whereClause}
+      ORDER BY ei.created_at DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+
+    const images = await query<ImageRow>(imagesQuery, [...params, limit, offset]);
+
+    // Get dataset counts for filter
+    const datasetsQuery = `
+      SELECT d.dataset_number, COUNT(*) as count
+      FROM extracted_images ei
+      JOIN documents d ON ei.document_id = d.id
+      GROUP BY d.dataset_number
+      ORDER BY d.dataset_number
+    `;
+    const datasets = await query<{ dataset_number: number; count: string }>(datasetsQuery);
+
+    return NextResponse.json({
+      results: images.map(img => ({
+        id: img.id,
+        document_id: img.document_id,
+        document_name: img.document_filename,
+        page_number: img.page_number || 1,
+        image_path: img.image_path_r2,
+        width: img.width || 300,
+        height: img.height || 200,
+        has_faces: img.has_faces,
+        dataset_number: img.dataset_number,
+        face_count: parseInt(img.face_count, 10),
+      })),
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      datasets: datasets.map(d => ({
+        number: d.dataset_number,
+        count: parseInt(d.count, 10),
+      })),
+    });
+  } catch (error) {
+    console.error('Photos API error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch photos', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
     );
   }
-
-  // Filter by has_faces
-  if (hasFaces === 'true') {
-    results = results.filter((p) => p.has_faces);
-  }
-
-  // Pagination
-  const total = results.length;
-  const totalPages = Math.ceil(total / limit);
-  const startIndex = (page - 1) * limit;
-  const paginatedResults = results.slice(startIndex, startIndex + limit);
-
-  return NextResponse.json({
-    results: paginatedResults,
-    total,
-    page,
-    totalPages,
-    limit,
-  });
 }

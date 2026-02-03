@@ -1,0 +1,24 @@
+# Ignore DataSet folders (PDFs are stored in R2)
+DataSet*
+DataSet 1
+DataSet 2
+DataSet 3
+DataSet 4
+DataSet 5
+DataSet 6
+DataSet 7
+DataSet 8
+DataSet_9
+DataSet_10
+DataSet_11
+DataSet 12
+
+# Ignore zip files
+*.zip
+
+# Scripts
+scripts/
+
+# Other
+.env.local
+.env.production

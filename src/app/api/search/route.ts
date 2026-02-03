@@ -1,118 +1,164 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { query } from '@/lib/database';
 
-// Mock data for development - will be replaced with Meilisearch
-const mockResults = [
-  {
-    id: 'doc_001',
-    filename: 'FBI_302_Interview_Report_2019.pdf',
-    dataset_number: 10,
-    document_type: 'fbi_report',
-    text_content: 'This document contains an FBI 302 interview report from 2019. The subject discussed various matters related to the investigation...',
-    ocr_confidence: 0.92,
-    page_count: 15,
-    mentioned_names: ['Jeffrey Epstein', 'Ghislaine Maxwell'],
-  },
-  {
-    id: 'doc_002',
-    filename: 'Deposition_Transcript_Vol1.pdf',
-    dataset_number: 12,
-    document_type: 'transcript',
-    text_content: 'Deposition transcript of witness testimony. Q: Please state your name for the record. A: ...',
-    ocr_confidence: 0.88,
-    page_count: 45,
-    mentioned_names: ['Prince Andrew', 'Virginia Giuffre'],
-  },
-  {
-    id: 'doc_003',
-    filename: 'Email_Communications_2015.pdf',
-    dataset_number: 8,
-    document_type: 'email',
-    text_content: 'From: example@email.com To: recipient@email.com Subject: Meeting scheduled...',
-    ocr_confidence: 0.95,
-    page_count: 3,
-    mentioned_names: [],
-  },
-];
+interface DocumentRow {
+  id: string;
+  filename: string;
+  dataset_number: number;
+  document_type: string;
+  text_content: string | null;
+  ocr_confidence: number | null;
+  page_count: number | null;
+}
+
+interface NameRow {
+  document_id: string;
+  names: string[];
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
 
-  const query = searchParams.get('q') || '';
+  const searchQuery = searchParams.get('q') || '';
   const page = parseInt(searchParams.get('page') || '1', 10);
-  const limit = parseInt(searchParams.get('limit') || '20', 10);
+  const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100);
   const type = searchParams.get('type');
-  const datasets = searchParams.get('datasets')?.split(',').map(Number);
+  const datasets = searchParams.get('datasets')?.split(',').map(Number).filter(n => !isNaN(n));
   const sort = searchParams.get('sort') || 'relevance';
 
   const startTime = Date.now();
+  const offset = (page - 1) * limit;
 
   try {
-    // In production, this would use Meilisearch
-    // For now, return mock data filtered by query
-    let results = [...mockResults];
+    // Build the WHERE clause
+    const conditions: string[] = [];
+    const params: (string | number | number[])[] = [];
+    let paramIndex = 1;
 
-    // Filter by query (simple substring match)
-    if (query) {
-      const lowerQuery = query.toLowerCase();
-      results = results.filter(
-        (doc) =>
-          doc.filename.toLowerCase().includes(lowerQuery) ||
-          doc.text_content.toLowerCase().includes(lowerQuery) ||
-          doc.mentioned_names.some((name) =>
-            name.toLowerCase().includes(lowerQuery)
-          )
-      );
+    // Search query - search in filename and text_content
+    if (searchQuery) {
+      conditions.push(`(
+        filename ILIKE $${paramIndex} OR
+        text_content ILIKE $${paramIndex} OR
+        id IN (SELECT document_id FROM mentioned_names WHERE name ILIKE $${paramIndex})
+      )`);
+      params.push(`%${searchQuery}%`);
+      paramIndex++;
     }
 
-    // Filter by type
+    // Filter by document type
     if (type) {
-      results = results.filter((doc) => doc.document_type === type);
+      conditions.push(`document_type = $${paramIndex}`);
+      params.push(type);
+      paramIndex++;
     }
 
     // Filter by datasets
     if (datasets && datasets.length > 0) {
-      results = results.filter((doc) => datasets.includes(doc.dataset_number));
+      conditions.push(`dataset_number = ANY($${paramIndex}::int[])`);
+      params.push(datasets);
+      paramIndex++;
     }
 
-    // Sort
-    if (sort === 'dataset') {
-      results.sort((a, b) => a.dataset_number - b.dataset_number);
-    } else if (sort === 'filename') {
-      results.sort((a, b) => a.filename.localeCompare(b.filename));
-    } else if (sort === 'confidence') {
-      results.sort((a, b) => b.ocr_confidence - a.ocr_confidence);
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Determine sort order
+    let orderClause = 'ORDER BY ';
+    switch (sort) {
+      case 'dataset':
+        orderClause += 'dataset_number ASC, filename ASC';
+        break;
+      case 'filename':
+        orderClause += 'filename ASC';
+        break;
+      case 'confidence':
+        orderClause += 'ocr_confidence DESC NULLS LAST';
+        break;
+      default: // relevance - prioritize matches in filename, then by dataset
+        if (searchQuery) {
+          orderClause += `
+            CASE WHEN filename ILIKE $${paramIndex} THEN 0 ELSE 1 END,
+            dataset_number ASC,
+            filename ASC
+          `;
+          params.push(`%${searchQuery}%`);
+          paramIndex++;
+        } else {
+          orderClause += 'dataset_number ASC, filename ASC';
+        }
     }
 
-    // Pagination
-    const total = results.length;
-    const totalPages = Math.ceil(total / limit);
-    const startIndex = (page - 1) * limit;
-    const paginatedResults = results.slice(startIndex, startIndex + limit);
+    // Get total count
+    const countQuery = `SELECT COUNT(*) as total FROM documents ${whereClause}`;
+    const countParams = params.slice(0, conditions.length); // Only use filter params for count
+    const countResult = await query<{ total: string }>(countQuery, countParams);
+    const total = parseInt(countResult[0]?.total || '0', 10);
 
-    // Add highlighting (mock)
-    const highlightedResults = paginatedResults.map((doc) => ({
-      ...doc,
-      _formatted: {
-        text_content: query
-          ? doc.text_content.replace(
-              new RegExp(`(${query})`, 'gi'),
-              '<mark class="search-highlight">$1</mark>'
-            )
-          : doc.text_content,
-      },
-    }));
+    // Get paginated results
+    const searchSql = `
+      SELECT id, filename, dataset_number, document_type,
+             SUBSTRING(text_content, 1, 500) as text_content,
+             ocr_confidence, page_count
+      FROM documents
+      ${whereClause}
+      ${orderClause}
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+    params.push(limit, offset);
+
+    const results = await query<DocumentRow>(searchSql, params);
+
+    // Get mentioned names for results
+    const docIds = results.map(r => r.id);
+    let namesMap: Record<string, string[]> = {};
+
+    if (docIds.length > 0) {
+      const namesQuery = `
+        SELECT document_id, ARRAY_AGG(DISTINCT name ORDER BY name) as names
+        FROM mentioned_names
+        WHERE document_id = ANY($1::text[])
+        GROUP BY document_id
+      `;
+      const namesResult = await query<NameRow>(namesQuery, [docIds]);
+      namesMap = Object.fromEntries(namesResult.map(r => [r.document_id, r.names || []]));
+    }
+
+    // Format results with highlighting
+    const formattedResults = results.map((doc) => {
+      let highlightedText = doc.text_content || '';
+
+      // Add highlighting for search query
+      if (searchQuery && highlightedText) {
+        const regex = new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        highlightedText = highlightedText.replace(regex, '<mark class="bg-yellow-200">$1</mark>');
+      }
+
+      return {
+        id: doc.id,
+        filename: doc.filename,
+        dataset_number: doc.dataset_number,
+        document_type: doc.document_type || 'document',
+        text_content: doc.text_content || '',
+        ocr_confidence: doc.ocr_confidence || 0,
+        page_count: doc.page_count || 1,
+        mentioned_names: namesMap[doc.id] || [],
+        _formatted: {
+          text_content: highlightedText,
+        },
+      };
+    });
 
     return NextResponse.json({
-      results: highlightedResults,
+      results: formattedResults,
       total,
       page,
-      totalPages,
+      totalPages: Math.ceil(total / limit),
       processingTimeMs: Date.now() - startTime,
     });
   } catch (error) {
     console.error('Search error:', error);
     return NextResponse.json(
-      { error: 'Search failed' },
+      { error: 'Search failed', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

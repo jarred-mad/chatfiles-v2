@@ -4,7 +4,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import SearchBar from '@/components/ui/SearchBar';
-import AdSlot from '@/components/ui/AdSlot';
+import AdSlot, { AdBanner } from '@/components/ui/AdSlot';
 
 interface SearchResult {
   id: string;
@@ -145,6 +145,9 @@ function SearchContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Top Ad Banner */}
+      <AdBanner id="search-top" className="bg-white border-b" />
+
       {/* Search Header */}
       <div className="bg-white border-b border-gray-200 py-6">
         <div className="max-w-7xl mx-auto px-4">

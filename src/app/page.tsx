@@ -1,72 +1,117 @@
 import Link from "next/link";
 import SearchBar from "@/components/ui/SearchBar";
-import AdSlot from "@/components/ui/AdSlot";
+import AdSlot, { AdBanner } from "@/components/ui/AdSlot";
+import { query } from "@/lib/database";
 
-// Example search chips
+// Example search chips - these are static suggestions
 const exampleSearches = [
   "Jeffrey Epstein",
   "Ghislaine Maxwell",
   "Flight Logs",
   "FBI Report",
-  "Bill Clinton",
-  "Prince Andrew",
+  "Deposition",
+  "Interview",
 ];
 
-// Featured collections
-const collections = [
-  {
-    title: "Flight Logs",
-    description: "Aircraft manifests and passenger records",
-    icon: "M12 19l9 2-9-18-9 18 9-2zm0 0v-8",
-    href: "/search?q=flight+logs&type=other",
-    count: "2,400+",
-  },
-  {
-    title: "FBI 302 Reports",
-    description: "FBI interview summaries and reports",
-    icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
-    href: "/search?type=fbi_report",
-    count: "8,500+",
-  },
-  {
-    title: "Court Depositions",
-    description: "Legal testimony and court documents",
-    icon: "M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3",
-    href: "/search?type=court_doc",
-    count: "12,000+",
-  },
-  {
-    title: "Photos & Images",
-    description: "Extracted photographs and documents",
-    icon: "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z",
-    href: "/photos",
-    count: "45,000+",
-  },
-  {
-    title: "Emails",
-    description: "Email correspondence and communications",
-    icon: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z",
-    href: "/search?type=email",
-    count: "15,000+",
-  },
-  {
-    title: "Video Footage",
-    description: "Surveillance and documentary videos",
-    icon: "M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z",
-    href: "/videos",
-    count: "200+",
-  },
-];
+async function getStats() {
+  try {
+    const [docCount, imageCount, faceCount, pageSum, byDataset, byType, topNames] = await Promise.all([
+      query<{ count: string }>('SELECT COUNT(*) as count FROM documents'),
+      query<{ count: string }>('SELECT COUNT(*) as count FROM extracted_images'),
+      query<{ count: string }>('SELECT COUNT(*) as count FROM faces'),
+      query<{ total: string }>('SELECT COALESCE(SUM(page_count), 0) as total FROM documents'),
+      query<{ dataset_number: number; count: string }>(
+        'SELECT dataset_number, COUNT(*) as count FROM documents GROUP BY dataset_number ORDER BY dataset_number'
+      ),
+      query<{ document_type: string; count: string }>(
+        'SELECT document_type, COUNT(*) as count FROM documents GROUP BY document_type ORDER BY count DESC'
+      ),
+      query<{ name: string; total: string }>(
+        `SELECT name, SUM(frequency) as total
+         FROM mentioned_names
+         GROUP BY name
+         ORDER BY total DESC
+         LIMIT 6`
+      ),
+    ]);
 
-// Stats (will be fetched from API in production)
-const stats = {
-  totalDocuments: "26,498",
-  totalPages: "935,000+",
-  totalImages: "45,000+",
-  totalFaces: "12,000+",
-};
+    return {
+      totalDocuments: parseInt(docCount[0]?.count || '0', 10),
+      totalPages: parseInt(pageSum[0]?.total || '0', 10),
+      totalImages: parseInt(imageCount[0]?.count || '0', 10),
+      totalFaces: parseInt(faceCount[0]?.count || '0', 10),
+      byDataset: byDataset.map(d => ({ number: d.dataset_number, count: parseInt(d.count, 10) })),
+      byType: byType.map(t => ({ type: t.document_type || 'other', count: parseInt(t.count, 10) })),
+      topNames: topNames.map(n => ({ name: n.name, count: parseInt(n.total, 10) })),
+    };
+  } catch (error) {
+    console.error('Failed to fetch stats:', error);
+    return {
+      totalDocuments: 0,
+      totalPages: 0,
+      totalImages: 0,
+      totalFaces: 0,
+      byDataset: [],
+      byType: [],
+      topNames: [],
+    };
+  }
+}
 
-export default function Home() {
+async function getRecentDocuments() {
+  try {
+    const docs = await query<{
+      id: string;
+      filename: string;
+      dataset_number: number;
+      document_type: string;
+    }>(
+      `SELECT id, filename, dataset_number, document_type
+       FROM documents
+       ORDER BY created_at DESC
+       LIMIT 8`
+    );
+    return docs;
+  } catch {
+    return [];
+  }
+}
+
+function formatNumber(num: number): string {
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `${(num / 1000).toFixed(0)}K+`;
+  return num.toString();
+}
+
+export default async function Home() {
+  const stats = await getStats();
+  const recentDocs = await getRecentDocuments();
+
+  // Build collections from real data
+  const collections = [
+    {
+      title: "All Documents",
+      description: "Browse the complete document archive",
+      icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z",
+      href: "/browse",
+      count: formatNumber(stats.totalDocuments),
+    },
+    {
+      title: "Photos & Images",
+      description: "Extracted photographs from documents",
+      icon: "M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z",
+      href: "/photos",
+      count: formatNumber(stats.totalImages),
+    },
+    ...stats.byDataset.slice(0, 4).map(ds => ({
+      title: `Dataset ${ds.number}`,
+      description: `${ds.count.toLocaleString()} documents`,
+      icon: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10",
+      href: `/search?datasets=${ds.number}`,
+      count: formatNumber(ds.count),
+    })),
+  ];
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -76,8 +121,8 @@ export default function Home() {
             Search the DOJ Epstein Files
           </h1>
           <p className="text-gray-300 text-lg md:text-xl mb-8">
-            {stats.totalPages} pages of publicly released government documents,
-            fully OCR&apos;d and searchable
+            {formatNumber(stats.totalPages)} pages of publicly released government documents,
+            fully searchable
           </p>
 
           {/* Main Search Bar */}
@@ -90,7 +135,7 @@ export default function Home() {
 
           {/* Example Searches */}
           <div className="flex flex-wrap justify-center gap-2">
-            {exampleSearches.map((term) => (
+            {(stats.topNames.length > 0 ? stats.topNames.map(n => n.name) : exampleSearches).map((term) => (
               <Link
                 key={term}
                 href={`/search?q=${encodeURIComponent(term)}`}
@@ -103,33 +148,36 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Top Banner Ad */}
+      <AdBanner id="home-top" className="bg-white border-b" />
+
       {/* Stats Bar */}
       <section className="bg-white border-b border-gray-200 py-6">
         <div className="max-w-6xl mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
               <div className="text-2xl md:text-3xl font-bold text-navy">
-                {stats.totalDocuments}
+                {stats.totalDocuments.toLocaleString()}
               </div>
               <div className="text-sm text-gray-500">Documents</div>
             </div>
             <div>
               <div className="text-2xl md:text-3xl font-bold text-navy">
-                {stats.totalPages}
+                {formatNumber(stats.totalPages)}
               </div>
               <div className="text-sm text-gray-500">Total Pages</div>
             </div>
             <div>
               <div className="text-2xl md:text-3xl font-bold text-navy">
-                {stats.totalImages}
+                {stats.totalImages.toLocaleString()}
               </div>
               <div className="text-sm text-gray-500">Images Extracted</div>
             </div>
             <div>
               <div className="text-2xl md:text-3xl font-bold text-navy">
-                {stats.totalFaces}
+                {stats.totalFaces.toLocaleString()}
               </div>
-              <div className="text-sm text-gray-500">Faces Identified</div>
+              <div className="text-sm text-gray-500">Faces Detected</div>
             </div>
           </div>
         </div>
@@ -171,7 +219,7 @@ export default function Home() {
                     {collection.description}
                   </p>
                   <p className="text-xs text-accent font-medium mt-2">
-                    {collection.count} documents
+                    {collection.count} items
                   </p>
                 </div>
               </Link>
@@ -208,8 +256,8 @@ export default function Home() {
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">We Process & Index</h3>
               <p className="text-sm text-gray-500">
-                Our pipeline runs OCR on scanned documents, extracts images,
-                identifies faces, and builds a searchable index.
+                Our pipeline extracts text, identifies names,
+                extracts images, and builds a searchable index.
               </p>
             </div>
             <div className="text-center">
@@ -219,44 +267,45 @@ export default function Home() {
               <h3 className="font-semibold text-gray-900 mb-2">You Search & Explore</h3>
               <p className="text-sm text-gray-500">
                 Full-text search across all documents. Find names, keywords,
-                and browse photos with facial recognition.
+                and browse photos from the archive.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Recent Documents (placeholder) */}
-      <section className="py-12 bg-gray-50">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">
-              Recently Added Documents
-            </h2>
-            <Link
-              href="/browse"
-              className="text-accent hover:text-accent-hover font-medium text-sm"
-            >
-              View All &rarr;
-            </Link>
+      {/* Recent Documents */}
+      {recentDocs.length > 0 && (
+        <section className="py-12 bg-gray-50">
+          <div className="max-w-6xl mx-auto px-4">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">
+                Recent Documents
+              </h2>
+              <Link
+                href="/browse"
+                className="text-accent hover:text-accent-hover font-medium text-sm"
+              >
+                View All &rarr;
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {recentDocs.map((doc) => (
+                <Link key={doc.id} href={`/documents/${doc.id}`} className="card card-hover p-4">
+                  <h3 className="font-medium text-gray-900 truncate text-sm">{doc.filename}</h3>
+                  <p className="text-xs text-gray-500 mt-1">Dataset {doc.dataset_number}</p>
+                  <div className="flex gap-2 mt-2">
+                    <span className="badge badge-other text-xs">{doc.document_type || 'document'}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="card p-4">
-                <div className="h-3 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-2 bg-gray-100 rounded w-1/2 mb-3"></div>
-                <div className="h-20 bg-gray-100 rounded mb-2"></div>
-                <div className="flex gap-2">
-                  <span className="badge badge-other">Dataset 12</span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="text-center text-gray-400 text-sm mt-4">
-            Documents will appear here once processing is complete
-          </p>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {/* Bottom Banner Ad */}
+      <AdBanner id="home-bottom" className="bg-gray-50" />
 
       {/* CTA Section */}
       <section className="py-12 bg-navy text-white">

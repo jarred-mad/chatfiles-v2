@@ -1,56 +1,125 @@
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import AdSlot from '@/components/ui/AdSlot';
+import PDFViewer from '@/components/ui/PDFViewer';
+import { query } from '@/lib/database';
+
+const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || 'https://pub-e8b8792b476a4216b2cbd491f9d61af0.r2.dev';
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-// Mock document data
+interface DocumentRow {
+  id: string;
+  filename: string;
+  dataset_number: number;
+  document_type: string | null;
+  file_path_r2: string | null;
+  file_size_bytes: number | null;
+  page_count: number | null;
+  text_content: string | null;
+  ocr_confidence: number | null;
+}
+
+interface MentionedNameRow {
+  name: string;
+  frequency: number;
+}
+
+interface ExtractedImageRow {
+  id: string;
+  page_number: number | null;
+  width: number | null;
+  height: number | null;
+  has_faces: boolean;
+  file_path_r2: string | null;
+}
+
+interface RelatedDocRow {
+  id: string;
+  filename: string;
+  dataset_number: number;
+}
+
 async function getDocument(id: string) {
-  // In production, fetch from database
-  return {
-    id,
-    filename: 'FBI_302_Interview_Report_2019.pdf',
-    dataset_number: 10,
-    document_type: 'fbi_report',
-    text_content: `FBI 302 INTERVIEW REPORT
+  try {
+    // Try to fetch from database
+    const docs = await query<DocumentRow>(
+      'SELECT * FROM documents WHERE id = $1',
+      [id]
+    );
 
-Date: March 15, 2019
-Location: Palm Beach, Florida
+    if (docs.length === 0) {
+      return null;
+    }
 
-SUBJECT: Interview regarding [REDACTED]
+    const doc = docs[0];
 
-The interview was conducted pursuant to the ongoing investigation. The subject agreed to speak voluntarily and was informed of the purpose of this interview.
+    // Fetch mentioned names
+    const names = await query<MentionedNameRow>(
+      'SELECT name, frequency FROM mentioned_names WHERE document_id = $1 ORDER BY frequency DESC LIMIT 20',
+      [id]
+    );
 
-STATEMENT:
+    // Fetch extracted images
+    const images = await query<ExtractedImageRow>(
+      'SELECT id, page_number, width, height, has_faces, file_path_r2 FROM extracted_images WHERE document_id = $1 ORDER BY page_number',
+      [id]
+    );
 
-The subject stated that they first became aware of the activities in question during the summer of 2008. They described their observations and interactions in detail.
+    // Fetch related documents (same dataset, excluding current)
+    const related = await query<RelatedDocRow>(
+      'SELECT id, filename, dataset_number FROM documents WHERE dataset_number = $1 AND id != $2 LIMIT 5',
+      [doc.dataset_number, id]
+    );
 
-[Several paragraphs of interview content would appear here in the actual document...]
+    // Construct full R2 URL for the PDF
+    let pdfUrl = doc.file_path_r2;
+    if (pdfUrl && !pdfUrl.startsWith('http')) {
+      // Construct URL from dataset and filename
+      const datasetFolder = `DataSet_${doc.dataset_number}`;
+      pdfUrl = `${R2_PUBLIC_URL}/documents/${datasetFolder}/${doc.filename}`;
+    }
 
-The interview was concluded at 3:45 PM. The subject agreed to make themselves available for follow-up questions if needed.
-
-Prepared by: Special Agent [REDACTED]
-Reviewed by: Supervisory Special Agent [REDACTED]`,
-    ocr_confidence: 0.92,
-    page_count: 15,
-    file_size_bytes: 2500000,
-    file_path_r2: '/documents/DataSet_10/FBI_302_Interview_Report_2019.pdf',
-    mentioned_names: ['Jeffrey Epstein', 'Ghislaine Maxwell', 'Virginia Giuffre'],
-    extracted_images: [
-      { id: 'img_001', page: 3, width: 800, height: 600, has_faces: true },
-      { id: 'img_002', page: 7, width: 600, height: 400, has_faces: false },
-    ],
-    related_documents: [
-      { id: 'doc_002', filename: 'FBI_302_Followup_2019.pdf', dataset_number: 10 },
-      { id: 'doc_003', filename: 'Deposition_Related.pdf', dataset_number: 12 },
-    ],
-  };
+    return {
+      id: doc.id,
+      filename: doc.filename,
+      dataset_number: doc.dataset_number,
+      document_type: doc.document_type || 'document',
+      text_content: doc.text_content || '',
+      ocr_confidence: doc.ocr_confidence || 0,
+      page_count: doc.page_count || 1,
+      file_size_bytes: doc.file_size_bytes || 0,
+      file_path_r2: pdfUrl,
+      mentioned_names: names.map(n => n.name),
+      extracted_images: images.map(img => ({
+        id: img.id,
+        page: img.page_number || 1,
+        width: img.width || 0,
+        height: img.height || 0,
+        has_faces: img.has_faces,
+        file_path_r2: img.file_path_r2,
+      })),
+      related_documents: related.map(r => ({
+        id: r.id,
+        filename: r.filename,
+        dataset_number: r.dataset_number,
+      })),
+    };
+  } catch (error) {
+    console.error('Database error:', error);
+    return null;
+  }
 }
 
 export default async function DocumentPage({ params }: PageProps) {
   const { id } = await params;
   const doc = await getDocument(id);
+
+  if (!doc) {
+    notFound();
+  }
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -80,7 +149,7 @@ export default async function DocumentPage({ params }: PageProps) {
               Home
             </Link>
             <span className="mx-2">/</span>
-            <Link href="/browse" className="hover:text-accent">
+            <Link href={`/browse?dataset=${doc.dataset_number}`} className="hover:text-accent">
               Dataset {doc.dataset_number}
             </Link>
             <span className="mx-2">/</span>
@@ -95,39 +164,47 @@ export default async function DocumentPage({ params }: PageProps) {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{doc.filename}</h1>
-              <div className="flex items-center gap-3 mt-2">
+              <div className="flex flex-wrap items-center gap-3 mt-2">
                 <span className={`badge ${getTypeBadgeClass(doc.document_type)}`}>
                   {doc.document_type.replace('_', ' ')}
                 </span>
                 <span className="text-sm text-gray-500">
                   Dataset {doc.dataset_number}
                 </span>
-                <span className="text-sm text-gray-500">{doc.page_count} pages</span>
-                <span className="text-sm text-gray-500">
-                  {formatFileSize(doc.file_size_bytes)}
-                </span>
-                <span className="text-sm text-gray-500">
-                  {Math.round(doc.ocr_confidence * 100)}% OCR confidence
-                </span>
+                {doc.page_count > 0 && (
+                  <span className="text-sm text-gray-500">{doc.page_count} pages</span>
+                )}
+                {doc.file_size_bytes > 0 && (
+                  <span className="text-sm text-gray-500">
+                    {formatFileSize(doc.file_size_bytes)}
+                  </span>
+                )}
+                {doc.ocr_confidence > 0 && (
+                  <span className="text-sm text-gray-500">
+                    {Math.round(doc.ocr_confidence * 100)}% OCR confidence
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex gap-2">
-              <a
-                href={doc.file_path_r2}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-navy text-white rounded-md hover:bg-navy-light transition-colors text-sm font-medium"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                Download PDF
-              </a>
+              {doc.file_path_r2 && (
+                <a
+                  href={doc.file_path_r2}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-navy text-white rounded-md hover:bg-navy-light transition-colors text-sm font-medium"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  Download PDF
+                </a>
+              )}
               <button className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors text-sm font-medium">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -149,64 +226,39 @@ export default async function DocumentPage({ params }: PageProps) {
           {/* Main Content */}
           <main className="flex-1">
             {/* PDF Viewer */}
-            <div className="bg-white rounded-lg shadow-sm mb-6">
-              <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-                <h2 className="font-semibold text-gray-900">Document Preview</h2>
-                <div className="text-sm text-gray-500">
-                  Page 1 of {doc.page_count}
-                </div>
+            {doc.file_path_r2 && (
+              <div className="bg-white rounded-lg shadow-sm mb-6 h-[800px]">
+                <PDFViewer url={doc.file_path_r2} />
               </div>
-              <div className="aspect-[8.5/11] bg-gray-100 flex items-center justify-center">
-                {/* In production, embed PDF viewer here */}
-                <div className="text-center text-gray-500">
-                  <svg
-                    className="w-16 h-16 mx-auto mb-4 text-gray-300"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                  <p>PDF viewer will be embedded here</p>
-                  <a
-                    href={doc.file_path_r2}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-accent hover:text-accent-hover mt-2 inline-block"
-                  >
-                    Open PDF in new tab
-                  </a>
-                </div>
-              </div>
-            </div>
+            )}
 
             {/* Transcription */}
-            <div className="bg-white rounded-lg shadow-sm">
-              <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-                <h2 className="font-semibold text-gray-900">OCR Transcription</h2>
-                <button className="text-sm text-accent hover:text-accent-hover">
-                  Copy Text
-                </button>
+            {doc.text_content && (
+              <div className="bg-white rounded-lg shadow-sm">
+                <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+                  <h2 className="font-semibold text-gray-900">OCR Transcription</h2>
+                  <button
+                    className="text-sm text-accent hover:text-accent-hover"
+                    onClick={() => navigator.clipboard?.writeText(doc.text_content)}
+                  >
+                    Copy Text
+                  </button>
+                </div>
+                <div className="p-4 max-h-[600px] overflow-y-auto">
+                  <pre className="whitespace-pre-wrap font-mono text-sm text-gray-700 leading-relaxed">
+                    {doc.text_content}
+                  </pre>
+                </div>
               </div>
-              <div className="p-4">
-                <pre className="whitespace-pre-wrap font-mono text-sm text-gray-700 leading-relaxed">
-                  {doc.text_content}
-                </pre>
-              </div>
-            </div>
+            )}
           </main>
 
           {/* Sidebar */}
           <aside className="w-full lg:w-80 flex-shrink-0 space-y-6">
             {/* Mentioned Names */}
-            <div className="bg-white rounded-lg shadow-sm p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">Mentioned Names</h3>
-              {doc.mentioned_names.length > 0 ? (
+            {doc.mentioned_names.length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm p-4">
+                <h3 className="font-semibold text-gray-900 mb-3">Mentioned Names</h3>
                 <div className="space-y-2">
                   {doc.mentioned_names.map((name) => (
                     <Link
@@ -218,40 +270,48 @@ export default async function DocumentPage({ params }: PageProps) {
                     </Link>
                   ))}
                 </div>
-              ) : (
-                <p className="text-sm text-gray-500">No names extracted</p>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Extracted Images */}
             {doc.extracted_images.length > 0 && (
               <div className="bg-white rounded-lg shadow-sm p-4">
                 <h3 className="font-semibold text-gray-900 mb-3">
-                  Photos in this Document
+                  Photos in this Document ({doc.extracted_images.length})
                 </h3>
                 <div className="grid grid-cols-2 gap-2">
-                  {doc.extracted_images.map((img) => (
+                  {doc.extracted_images.slice(0, 6).map((img) => (
                     <div
                       key={img.id}
-                      className="aspect-square bg-gray-100 rounded relative"
+                      className="aspect-square bg-gray-100 rounded relative overflow-hidden"
                     >
+                      {img.file_path_r2 && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={img.file_path_r2.startsWith('http') ? img.file_path_r2 : `${R2_PUBLIC_URL}/${img.file_path_r2}`}
+                          alt={`Image from page ${img.page}`}
+                          className="w-full h-full object-cover"
+                        />
+                      )}
                       {img.has_faces && (
                         <span className="absolute top-1 right-1 bg-accent text-white text-xs px-1 rounded">
                           Face
                         </span>
                       )}
-                      <span className="absolute bottom-1 left-1 text-xs text-gray-500">
+                      <span className="absolute bottom-1 left-1 text-xs text-white bg-black/50 px-1 rounded">
                         p.{img.page}
                       </span>
                     </div>
                   ))}
                 </div>
-                <Link
-                  href={`/photos?document=${doc.id}`}
-                  className="block text-center text-sm text-accent hover:text-accent-hover mt-3"
-                >
-                  View all images
-                </Link>
+                {doc.extracted_images.length > 6 && (
+                  <Link
+                    href={`/photos?document=${doc.id}`}
+                    className="block text-center text-sm text-accent hover:text-accent-hover mt-3"
+                  >
+                    View all {doc.extracted_images.length} images
+                  </Link>
+                )}
               </div>
             )}
 

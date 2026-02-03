@@ -1,47 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateApiKey, RATE_LIMITS } from '@/lib/api-auth';
+import { query } from '@/lib/database';
 
-// Mock cluster detail
-const mockCluster = {
-  id: 'cluster_1',
-  label: 'Jeffrey Epstein',
-  sample_image_url: 'https://files.chatfiles.org/faces/clusters/cluster_1/sample.jpg',
-  face_count: 245,
-  document_count: 89,
-  is_known_person: true,
-  confidence: 0.98,
-  faces: [
-    {
-      id: 'face_001',
-      image_url: 'https://files.chatfiles.org/faces/crops/face_001.jpg',
-      document_id: 'doc_001',
-      document_filename: 'FBI_302_Interview_Report.pdf',
-      page_number: 3,
-      confidence: 0.94,
-    },
-    {
-      id: 'face_002',
-      image_url: 'https://files.chatfiles.org/faces/crops/face_002.jpg',
-      document_id: 'doc_015',
-      document_filename: 'Surveillance_Photos_2015.pdf',
-      page_number: 1,
-      confidence: 0.91,
-    },
-    {
-      id: 'face_003',
-      image_url: 'https://files.chatfiles.org/faces/crops/face_003.jpg',
-      document_id: 'doc_023',
-      document_filename: 'Evidence_Collection.pdf',
-      page_number: 5,
-      confidence: 0.89,
-    },
-  ],
-  co_occurring_clusters: [
-    { id: 'cluster_2', label: 'Ghislaine Maxwell', co_occurrences: 45 },
-    { id: 'cluster_3', label: 'Prince Andrew', co_occurrences: 12 },
-    { id: 'cluster_4', label: null, co_occurrences: 8 },
-  ],
-};
+interface ClusterRow {
+  id: string;
+  label: string | null;
+  sample_image_path: string | null;
+  face_count: number;
+  is_known_person: boolean;
+}
+
+interface FaceRow {
+  id: string;
+  face_crop_path: string | null;
+  document_id: string | null;
+  document_filename: string | null;
+  page_number: number | null;
+  confidence: number | null;
+}
+
+interface CoOccurringRow {
+  id: string;
+  label: string | null;
+  co_occurrences: string;
+}
 
 export async function GET(
   request: NextRequest,
@@ -67,39 +49,112 @@ export async function GET(
   const includeFaces = searchParams.get('include_faces') !== 'false';
   const faceLimit = Math.min(parseInt(searchParams.get('face_limit') || '50', 10), 200);
 
-  // In production, fetch from database
-  if (id !== 'cluster_1') {
+  try {
+    // Get cluster
+    const clusterResult = await query<ClusterRow>(
+      `SELECT id, label, sample_image_path, face_count, is_known_person
+       FROM face_clusters
+       WHERE id = $1`,
+      [id]
+    );
+
+    if (clusterResult.length === 0) {
+      return NextResponse.json(
+        {
+          error: {
+            code: 'NOT_FOUND',
+            message: `Face cluster with id '${id}' not found`,
+          },
+        },
+        { status: 404 }
+      );
+    }
+
+    const cluster = clusterResult[0];
+
+    // Get document count
+    const docCountResult = await query<{ count: string }>(
+      `SELECT COUNT(DISTINCT document_id) as count FROM faces WHERE cluster_id = $1`,
+      [id]
+    );
+
+    let faces: FaceRow[] = [];
+    if (includeFaces) {
+      faces = await query<FaceRow>(
+        `SELECT f.id, f.face_crop_path, f.document_id, d.filename as document_filename,
+                ei.page_number, f.confidence
+         FROM faces f
+         LEFT JOIN documents d ON f.document_id = d.id
+         LEFT JOIN extracted_images ei ON f.image_id = ei.id
+         WHERE f.cluster_id = $1
+         ORDER BY f.confidence DESC
+         LIMIT $2`,
+        [id, faceLimit]
+      );
+    }
+
+    // Get co-occurring clusters (faces in same documents)
+    const coOccurring = await query<CoOccurringRow>(
+      `SELECT fc.id, fc.label, COUNT(*) as co_occurrences
+       FROM faces f1
+       JOIN faces f2 ON f1.document_id = f2.document_id AND f1.cluster_id != f2.cluster_id
+       JOIN face_clusters fc ON f2.cluster_id = fc.id
+       WHERE f1.cluster_id = $1
+       GROUP BY fc.id, fc.label
+       ORDER BY co_occurrences DESC
+       LIMIT 10`,
+      [id]
+    );
+
+    const response = {
+      id: cluster.id,
+      label: cluster.label,
+      sample_image_url: cluster.sample_image_path,
+      face_count: cluster.face_count,
+      document_count: parseInt(docCountResult[0]?.count || '0', 10),
+      is_known_person: cluster.is_known_person,
+      faces: includeFaces ? faces.map(f => ({
+        id: f.id,
+        image_url: f.face_crop_path,
+        document_id: f.document_id,
+        document_filename: f.document_filename,
+        page_number: f.page_number,
+        confidence: f.confidence,
+      })) : undefined,
+      co_occurring_clusters: coOccurring.map(c => ({
+        id: c.id,
+        label: c.label,
+        co_occurrences: parseInt(c.co_occurrences, 10),
+      })),
+    };
+
+    const limits = RATE_LIMITS[auth.data.tier];
+
+    return NextResponse.json(
+      {
+        data: response,
+      },
+      {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'X-RateLimit-Limit': String(limits.daily),
+          'X-RateLimit-Remaining': String(Math.max(0, limits.daily - auth.data.dailyUsage)),
+          'X-API-Tier': auth.data.tier,
+        },
+      }
+    );
+  } catch (error) {
+    console.error('API cluster detail error:', error);
     return NextResponse.json(
       {
         error: {
-          code: 'NOT_FOUND',
-          message: `Face cluster with id '${id}' not found`,
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to fetch cluster',
         },
       },
-      { status: 404 }
+      { status: 500 }
     );
   }
-
-  const response = {
-    ...mockCluster,
-    faces: includeFaces ? mockCluster.faces.slice(0, faceLimit) : undefined,
-  };
-
-  const limits = RATE_LIMITS[auth.data.tier];
-
-  return NextResponse.json(
-    {
-      data: response,
-    },
-    {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'X-RateLimit-Limit': String(limits.daily),
-        'X-RateLimit-Remaining': String(Math.max(0, limits.daily - auth.data.dailyUsage)),
-        'X-API-Tier': auth.data.tier,
-      },
-    }
-  );
 }
 
 export async function OPTIONS() {

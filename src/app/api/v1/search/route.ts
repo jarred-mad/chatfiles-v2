@@ -1,31 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateApiKey, RATE_LIMITS } from '@/lib/api-auth';
+import { query } from '@/lib/database';
 
-// Mock search results
-const mockResults = [
-  {
-    id: 'doc_001',
-    filename: 'FBI_302_Interview_Report_2019.pdf',
-    dataset_number: 10,
-    document_type: 'fbi_report',
-    excerpt: 'This document contains an FBI 302 interview report...',
-    ocr_confidence: 0.92,
-    page_count: 15,
-    mentioned_names: ['Jeffrey Epstein', 'Ghislaine Maxwell'],
-    url: 'https://chatfiles.org/documents/doc_001',
-  },
-  {
-    id: 'doc_002',
-    filename: 'Deposition_Transcript_Vol1.pdf',
-    dataset_number: 12,
-    document_type: 'transcript',
-    excerpt: 'Deposition transcript of witness testimony...',
-    ocr_confidence: 0.88,
-    page_count: 45,
-    mentioned_names: ['Prince Andrew', 'Virginia Giuffre'],
-    url: 'https://chatfiles.org/documents/doc_002',
-  },
-];
+interface DocumentRow {
+  id: string;
+  filename: string;
+  dataset_number: number;
+  document_type: string;
+  text_content: string | null;
+  ocr_confidence: number | null;
+  page_count: number | null;
+}
+
+interface NameRow {
+  document_id: string;
+  names: string[];
+}
 
 export async function GET(request: NextRequest) {
   // Validate API key
@@ -45,7 +35,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
 
-  const query = searchParams.get('q') || '';
+  const searchQuery = searchParams.get('q') || '';
   const page = parseInt(searchParams.get('page') || '1', 10);
   const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 100);
   const dataset = searchParams.get('dataset');
@@ -64,54 +54,119 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Filter mock results
-  let results = [...mockResults];
+  const offset = (page - 1) * limit;
 
-  if (query) {
-    const lowerQuery = query.toLowerCase();
-    results = results.filter(
-      (doc) =>
-        doc.filename.toLowerCase().includes(lowerQuery) ||
-        doc.excerpt.toLowerCase().includes(lowerQuery) ||
-        doc.mentioned_names.some((name) => name.toLowerCase().includes(lowerQuery))
+  try {
+    // Build WHERE clause
+    const conditions: string[] = [];
+    const params: (string | number | number[])[] = [];
+    let paramIndex = 1;
+
+    if (searchQuery) {
+      conditions.push(`(
+        filename ILIKE $${paramIndex} OR
+        text_content ILIKE $${paramIndex} OR
+        id IN (SELECT document_id FROM mentioned_names WHERE name ILIKE $${paramIndex})
+      )`);
+      params.push(`%${searchQuery}%`);
+      paramIndex++;
+    }
+
+    if (type) {
+      conditions.push(`document_type = $${paramIndex}`);
+      params.push(type);
+      paramIndex++;
+    }
+
+    if (dataset) {
+      conditions.push(`dataset_number = $${paramIndex}`);
+      params.push(parseInt(dataset, 10));
+      paramIndex++;
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Get total count
+    const countQuery = `SELECT COUNT(*) as total FROM documents ${whereClause}`;
+    const countParams = params.slice(0, conditions.length);
+    const countResult = await query<{ total: string }>(countQuery, countParams);
+    const total = parseInt(countResult[0]?.total || '0', 10);
+
+    // Get paginated results
+    const searchSql = `
+      SELECT id, filename, dataset_number, document_type,
+             SUBSTRING(text_content, 1, 300) as text_content,
+             ocr_confidence, page_count
+      FROM documents
+      ${whereClause}
+      ORDER BY dataset_number ASC, filename ASC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+    params.push(limit, offset);
+
+    const results = await query<DocumentRow>(searchSql, params);
+
+    // Get mentioned names for results
+    const docIds = results.map(r => r.id);
+    let namesMap: Record<string, string[]> = {};
+
+    if (docIds.length > 0) {
+      const namesQuery = `
+        SELECT document_id, ARRAY_AGG(DISTINCT name ORDER BY name) as names
+        FROM mentioned_names
+        WHERE document_id = ANY($1::text[])
+        GROUP BY document_id
+      `;
+      const namesResult = await query<NameRow>(namesQuery, [docIds]);
+      namesMap = Object.fromEntries(namesResult.map(r => [r.document_id, r.names || []]));
+    }
+
+    const formattedResults = results.map(doc => ({
+      id: doc.id,
+      filename: doc.filename,
+      dataset_number: doc.dataset_number,
+      document_type: doc.document_type || 'document',
+      excerpt: doc.text_content || '',
+      ocr_confidence: doc.ocr_confidence || 0,
+      page_count: doc.page_count || 1,
+      mentioned_names: namesMap[doc.id] || [],
+      url: `https://chatfiles.org/documents/${doc.id}`,
+    }));
+
+    const limits = RATE_LIMITS[auth.data.tier];
+
+    return NextResponse.json(
+      {
+        data: formattedResults,
+        meta: {
+          query: searchQuery,
+          total,
+          page,
+          limit,
+          total_pages: Math.ceil(total / limit),
+        },
+      },
+      {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'X-RateLimit-Limit': String(limits.daily),
+          'X-RateLimit-Remaining': String(Math.max(0, limits.daily - auth.data.dailyUsage)),
+          'X-API-Tier': auth.data.tier,
+        },
+      }
+    );
+  } catch (error) {
+    console.error('API search error:', error);
+    return NextResponse.json(
+      {
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Search failed',
+        },
+      },
+      { status: 500 }
     );
   }
-
-  if (dataset) {
-    results = results.filter((doc) => doc.dataset_number === parseInt(dataset, 10));
-  }
-
-  if (type) {
-    results = results.filter((doc) => doc.document_type === type);
-  }
-
-  const total = results.length;
-  const totalPages = Math.ceil(total / limit);
-  const startIndex = (page - 1) * limit;
-  const paginatedResults = results.slice(startIndex, startIndex + limit);
-
-  const limits = RATE_LIMITS[auth.data.tier];
-
-  return NextResponse.json(
-    {
-      data: paginatedResults,
-      meta: {
-        query,
-        total,
-        page,
-        limit,
-        total_pages: totalPages,
-      },
-    },
-    {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'X-RateLimit-Limit': String(limits.daily),
-        'X-RateLimit-Remaining': String(Math.max(0, limits.daily - auth.data.dailyUsage)),
-        'X-API-Tier': auth.data.tier,
-      },
-    }
-  );
 }
 
 // CORS preflight

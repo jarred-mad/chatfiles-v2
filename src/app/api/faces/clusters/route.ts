@@ -1,120 +1,90 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { query } from '@/lib/database';
 
-// Mock cluster data
-const mockClusters = [
-  {
-    id: 'cluster_1',
-    label: 'Jeffrey Epstein',
-    sample_image_path: '/faces/clusters/cluster_1/sample.jpg',
-    face_count: 245,
-    is_known_person: true,
-    match_confidence: 0.98,
-    documents_count: 89,
-  },
-  {
-    id: 'cluster_2',
-    label: 'Ghislaine Maxwell',
-    sample_image_path: '/faces/clusters/cluster_2/sample.jpg',
-    face_count: 178,
-    is_known_person: true,
-    match_confidence: 0.96,
-    documents_count: 67,
-  },
-  {
-    id: 'cluster_3',
-    label: 'Prince Andrew',
-    sample_image_path: '/faces/clusters/cluster_3/sample.jpg',
-    face_count: 45,
-    is_known_person: true,
-    match_confidence: 0.92,
-    documents_count: 23,
-  },
-  {
-    id: 'cluster_4',
-    label: 'Virginia Giuffre',
-    sample_image_path: '/faces/clusters/cluster_4/sample.jpg',
-    face_count: 67,
-    is_known_person: true,
-    match_confidence: 0.94,
-    documents_count: 34,
-  },
-  {
-    id: 'cluster_5',
-    label: 'Alan Dershowitz',
-    sample_image_path: '/faces/clusters/cluster_5/sample.jpg',
-    face_count: 23,
-    is_known_person: true,
-    match_confidence: 0.91,
-    documents_count: 12,
-  },
-  // Unknown persons
-  {
-    id: 'cluster_6',
-    label: null,
-    sample_image_path: '/faces/clusters/cluster_6/sample.jpg',
-    face_count: 89,
-    is_known_person: false,
-    match_confidence: null,
-    documents_count: 45,
-  },
-  {
-    id: 'cluster_7',
-    label: null,
-    sample_image_path: '/faces/clusters/cluster_7/sample.jpg',
-    face_count: 56,
-    is_known_person: false,
-    match_confidence: null,
-    documents_count: 28,
-  },
-  {
-    id: 'cluster_8',
-    label: null,
-    sample_image_path: '/faces/clusters/cluster_8/sample.jpg',
-    face_count: 34,
-    is_known_person: false,
-    match_confidence: null,
-    documents_count: 17,
-  },
-];
+interface ClusterRow {
+  id: string;
+  label: string | null;
+  sample_image_path: string | null;
+  face_count: number;
+  is_known_person: boolean;
+  documents_count: string;
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
 
   const page = parseInt(searchParams.get('page') || '1', 10);
-  const limit = parseInt(searchParams.get('limit') || '50', 10);
+  const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
   const knownOnly = searchParams.get('known_only') === 'true';
 
-  let results = [...mockClusters];
+  const offset = (page - 1) * limit;
 
-  // Filter by known persons only
-  if (knownOnly) {
-    results = results.filter((c) => c.is_known_person);
+  try {
+    const whereClause = knownOnly ? 'WHERE fc.is_known_person = true' : '';
+
+    // Get total count
+    const countQuery = `SELECT COUNT(*) as total FROM face_clusters fc ${whereClause}`;
+    const countResult = await query<{ total: string }>(countQuery);
+    const total = parseInt(countResult[0]?.total || '0', 10);
+
+    // Get clusters with document count
+    const clustersQuery = `
+      SELECT
+        fc.id,
+        fc.label,
+        fc.sample_image_path,
+        fc.face_count,
+        fc.is_known_person,
+        COUNT(DISTINCT f.document_id) as documents_count
+      FROM face_clusters fc
+      LEFT JOIN faces f ON fc.id = f.cluster_id
+      ${whereClause}
+      GROUP BY fc.id, fc.label, fc.sample_image_path, fc.face_count, fc.is_known_person
+      ORDER BY fc.is_known_person DESC, fc.face_count DESC
+      LIMIT $1 OFFSET $2
+    `;
+    const clusters = await query<ClusterRow>(clustersQuery, [limit, offset]);
+
+    // Get summary stats
+    const summaryQuery = `
+      SELECT
+        COUNT(*) as total_clusters,
+        SUM(CASE WHEN is_known_person THEN 1 ELSE 0 END) as known_persons,
+        SUM(CASE WHEN NOT is_known_person THEN 1 ELSE 0 END) as unknown_persons,
+        SUM(face_count) as total_faces
+      FROM face_clusters
+    `;
+    const summaryResult = await query<{
+      total_clusters: string;
+      known_persons: string;
+      unknown_persons: string;
+      total_faces: string;
+    }>(summaryQuery);
+
+    return NextResponse.json({
+      clusters: clusters.map(c => ({
+        id: c.id,
+        label: c.label,
+        sample_image_path: c.sample_image_path,
+        face_count: c.face_count,
+        is_known_person: c.is_known_person,
+        documents_count: parseInt(c.documents_count, 10),
+      })),
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      summary: {
+        total_clusters: parseInt(summaryResult[0]?.total_clusters || '0', 10),
+        known_persons: parseInt(summaryResult[0]?.known_persons || '0', 10),
+        unknown_persons: parseInt(summaryResult[0]?.unknown_persons || '0', 10),
+        total_faces: parseInt(summaryResult[0]?.total_faces || '0', 10),
+      },
+    });
+  } catch (error) {
+    console.error('Clusters API error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch clusters', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
   }
-
-  // Sort: known persons first, then by face count
-  results.sort((a, b) => {
-    if (a.is_known_person !== b.is_known_person) {
-      return a.is_known_person ? -1 : 1;
-    }
-    return b.face_count - a.face_count;
-  });
-
-  // Pagination
-  const total = results.length;
-  const totalPages = Math.ceil(total / limit);
-  const startIndex = (page - 1) * limit;
-  const paginatedResults = results.slice(startIndex, startIndex + limit);
-
-  return NextResponse.json({
-    clusters: paginatedResults,
-    total,
-    page,
-    totalPages,
-    summary: {
-      total_clusters: mockClusters.length,
-      known_persons: mockClusters.filter((c) => c.is_known_person).length,
-      unknown_persons: mockClusters.filter((c) => !c.is_known_person).length,
-      total_faces: mockClusters.reduce((sum, c) => sum + c.face_count, 0),
-    },
-  });
 }

@@ -1,37 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateApiKey, RATE_LIMITS } from '@/lib/api-auth';
+import { query } from '@/lib/database';
 
-// Mock images data
-const mockImages = [
-  {
-    id: 'img_001',
-    document_id: 'doc_001',
-    page_number: 3,
-    image_url: 'https://files.chatfiles.org/images/DataSet_10/doc_001_page3_img0.png',
-    width: 800,
-    height: 600,
-    has_faces: true,
-    faces: [
-      {
-        id: 'face_001',
-        bounding_box: { x: 100, y: 50, width: 150, height: 180 },
-        cluster_id: 'cluster_1',
-        cluster_label: 'Jeffrey Epstein',
-        confidence: 0.94,
-      },
-    ],
-  },
-  {
-    id: 'img_002',
-    document_id: 'doc_001',
-    page_number: 7,
-    image_url: 'https://files.chatfiles.org/images/DataSet_10/doc_001_page7_img0.png',
-    width: 600,
-    height: 400,
-    has_faces: false,
-    faces: [],
-  },
-];
+interface ImageRow {
+  id: string;
+  document_id: string;
+  page_number: number | null;
+  image_path_r2: string | null;
+  width: number | null;
+  height: number | null;
+  has_faces: boolean;
+}
+
+interface FaceRow {
+  id: string;
+  image_id: string;
+  bounding_box: { x: number; y: number; width: number; height: number } | null;
+  cluster_id: string | null;
+  cluster_label: string | null;
+  confidence: number | null;
+}
 
 export async function GET(
   request: NextRequest,
@@ -56,44 +44,113 @@ export async function GET(
   const { searchParams } = new URL(request.url);
   const hasFaces = searchParams.get('has_faces');
 
-  // Filter mock data
-  let images = mockImages.filter((img) => img.document_id === id);
+  try {
+    // Build WHERE clause
+    let whereClause = 'WHERE document_id = $1';
+    const params_arr: (string | boolean)[] = [id];
 
-  if (hasFaces === 'true') {
-    images = images.filter((img) => img.has_faces);
-  }
+    if (hasFaces === 'true') {
+      whereClause += ' AND has_faces = true';
+    }
 
-  if (images.length === 0 && id !== 'doc_001') {
+    // Get images for document
+    const imagesResult = await query<ImageRow>(
+      `SELECT id, document_id, page_number, image_path_r2, width, height, has_faces
+       FROM extracted_images
+       ${whereClause}
+       ORDER BY page_number`,
+      params_arr
+    );
+
+    if (imagesResult.length === 0) {
+      // Check if document exists
+      const docCheck = await query<{ id: string }>(
+        'SELECT id FROM documents WHERE id = $1',
+        [id]
+      );
+
+      if (docCheck.length === 0) {
+        return NextResponse.json(
+          {
+            error: {
+              code: 'NOT_FOUND',
+              message: `Document '${id}' not found`,
+            },
+          },
+          { status: 404 }
+        );
+      }
+    }
+
+    // Get faces for these images
+    const imageIds = imagesResult.map(img => img.id);
+    const facesMap: Record<string, FaceRow[]> = {};
+
+    if (imageIds.length > 0) {
+      const facesResult = await query<FaceRow>(
+        `SELECT f.id, f.image_id, f.bounding_box, f.cluster_id, fc.label as cluster_label, f.confidence
+         FROM faces f
+         LEFT JOIN face_clusters fc ON f.cluster_id = fc.id
+         WHERE f.image_id = ANY($1::text[])`,
+        [imageIds]
+      );
+
+      for (const face of facesResult) {
+        if (!facesMap[face.image_id]) {
+          facesMap[face.image_id] = [];
+        }
+        facesMap[face.image_id].push(face);
+      }
+    }
+
+    const images = imagesResult.map(img => ({
+      id: img.id,
+      document_id: img.document_id,
+      page_number: img.page_number,
+      image_url: img.image_path_r2,
+      width: img.width,
+      height: img.height,
+      has_faces: img.has_faces,
+      faces: (facesMap[img.id] || []).map(f => ({
+        id: f.id,
+        bounding_box: f.bounding_box,
+        cluster_id: f.cluster_id,
+        cluster_label: f.cluster_label,
+        confidence: f.confidence,
+      })),
+    }));
+
+    const limits = RATE_LIMITS[auth.data.tier];
+
+    return NextResponse.json(
+      {
+        data: images,
+        meta: {
+          document_id: id,
+          total: images.length,
+        },
+      },
+      {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'X-RateLimit-Limit': String(limits.daily),
+          'X-RateLimit-Remaining': String(Math.max(0, limits.daily - auth.data.dailyUsage)),
+          'X-API-Tier': auth.data.tier,
+        },
+      }
+    );
+  } catch (error) {
+    console.error('API images error:', error);
     return NextResponse.json(
       {
         error: {
-          code: 'NOT_FOUND',
-          message: `No images found for document '${id}'`,
+          code: 'INTERNAL_ERROR',
+          message: 'Failed to fetch images',
         },
       },
-      { status: 404 }
+      { status: 500 }
     );
   }
-
-  const limits = RATE_LIMITS[auth.data.tier];
-
-  return NextResponse.json(
-    {
-      data: images,
-      meta: {
-        document_id: id,
-        total: images.length,
-      },
-    },
-    {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'X-RateLimit-Limit': String(limits.daily),
-        'X-RateLimit-Remaining': String(Math.max(0, limits.daily - auth.data.dailyUsage)),
-        'X-API-Tier': auth.data.tier,
-      },
-    }
-  );
 }
 
 export async function OPTIONS() {
