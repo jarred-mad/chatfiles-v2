@@ -39,7 +39,7 @@ const DOCUMENT_TYPES = [
   { value: 'other', label: 'Other' },
 ];
 
-const DATASETS = [8, 9, 10, 11, 12];
+const DATASETS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 const SORT_OPTIONS = [
   { value: 'relevance', label: 'Relevance' },
@@ -70,23 +70,17 @@ function SearchContent() {
   const [selectedSort, setSelectedSort] = useState(sort);
   const [showFilters, setShowFilters] = useState(false);
 
-  // Fetch search results
+  // Fetch search results (also works without query to browse all)
   useEffect(() => {
-    if (!query) {
-      setResults([]);
-      setTotal(0);
-      return;
-    }
-
     const fetchResults = async () => {
       setLoading(true);
       try {
         const params = new URLSearchParams({
-          q: query,
           page: String(page),
           limit: '20',
           sort: selectedSort,
         });
+        if (query) params.set('q', query);
         if (selectedType) params.set('type', selectedType);
         if (selectedDatasets.length > 0) {
           params.set('datasets', selectedDatasets.join(','));
@@ -154,12 +148,15 @@ function SearchContent() {
           <div className="max-w-2xl">
             <SearchBar initialQuery={query} placeholder="Search documents..." />
           </div>
-          {query && (
-            <div className="mt-4 flex items-center gap-4 text-sm text-gray-500">
-              <span>
-                {total.toLocaleString()} results for &quot;{query}&quot;
-              </span>
-              <span>({processingTime}ms)</span>
+          {total > 0 && (
+            <div className="mt-4 flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-4 text-sm text-gray-500">
+                <span className="font-medium text-gray-900">
+                  Showing {((page - 1) * 20) + 1} to {Math.min(page * 20, total)} of {total.toLocaleString()} Results
+                </span>
+                {query && <span>for &quot;{query}&quot;</span>}
+                <span className="text-gray-400">({processingTime}ms)</span>
+              </div>
             </div>
           )}
         </div>
@@ -387,24 +384,81 @@ function SearchContent() {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="flex justify-center items-center gap-2 pt-6">
-                    <button
-                      onClick={() => updateUrl({ page: String(page - 1) })}
-                      disabled={page === 1}
-                      className="px-4 py-2 rounded-md border border-gray-300 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                    >
-                      Previous
-                    </button>
-                    <span className="text-sm text-gray-500">
-                      Page {page} of {totalPages}
-                    </span>
-                    <button
-                      onClick={() => updateUrl({ page: String(page + 1) })}
-                      disabled={page === totalPages}
-                      className="px-4 py-2 rounded-md border border-gray-300 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                    >
-                      Next
-                    </button>
+                  <div className="flex flex-col items-center gap-4 pt-6">
+                    <div className="flex items-center gap-1 flex-wrap justify-center">
+                      {/* First page */}
+                      {page > 3 && (
+                        <>
+                          <button
+                            onClick={() => updateUrl({ page: '1' })}
+                            className="px-3 py-2 rounded-md border border-gray-300 text-sm font-medium hover:bg-gray-50"
+                          >
+                            1
+                          </button>
+                          {page > 4 && <span className="px-2 text-gray-400">...</span>}
+                        </>
+                      )}
+
+                      {/* Page numbers around current */}
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum: number;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (page <= 3) {
+                          pageNum = i + 1;
+                        } else if (page >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = page - 2 + i;
+                        }
+
+                        if (pageNum < 1 || pageNum > totalPages) return null;
+
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => updateUrl({ page: String(pageNum) })}
+                            className={`px-3 py-2 rounded-md text-sm font-medium ${
+                              page === pageNum
+                                ? 'bg-navy text-white'
+                                : 'border border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+
+                      {/* Last page */}
+                      {page < totalPages - 2 && totalPages > 5 && (
+                        <>
+                          {page < totalPages - 3 && <span className="px-2 text-gray-400">...</span>}
+                          <button
+                            onClick={() => updateUrl({ page: String(totalPages) })}
+                            className="px-3 py-2 rounded-md border border-gray-300 text-sm font-medium hover:bg-gray-50"
+                          >
+                            {totalPages}
+                          </button>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => updateUrl({ page: String(page - 1) })}
+                        disabled={page === 1}
+                        className="px-4 py-2 rounded-md border border-gray-300 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        &larr; Previous
+                      </button>
+                      <button
+                        onClick={() => updateUrl({ page: String(page + 1) })}
+                        disabled={page === totalPages}
+                        className="px-4 py-2 rounded-md border border-gray-300 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        Next &rarr;
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
