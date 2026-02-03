@@ -8,7 +8,7 @@ export async function GET() {
       pageSum,
       imageCount,
       faceCount,
-      clusterStats,
+      clusterCount,
       byDataset,
       byType,
       topNames,
@@ -17,12 +17,7 @@ export async function GET() {
       query<{ total: string }>('SELECT COALESCE(SUM(page_count), 0) as total FROM documents'),
       query<{ count: string }>('SELECT COUNT(*) as count FROM extracted_images'),
       query<{ count: string }>('SELECT COUNT(*) as count FROM faces'),
-      query<{ total: string; known: string }>(
-        `SELECT
-          COUNT(*) as total,
-          SUM(CASE WHEN is_known_person THEN 1 ELSE 0 END) as known
-        FROM face_clusters`
-      ),
+      query<{ count: string }>('SELECT COUNT(*) as count FROM face_clusters'),
       query<{ dataset_number: number; count: string }>(
         `SELECT dataset_number, COUNT(*) as count
          FROM documents
@@ -44,8 +39,12 @@ export async function GET() {
       ),
     ]);
 
-    const totalClusters = parseInt(clusterStats[0]?.total || '0', 10);
-    const knownPersons = parseInt(clusterStats[0]?.known || '0', 10);
+    const totalClusters = parseInt(clusterCount[0]?.count || '0', 10);
+    // Count clusters with labels as "known persons"
+    const knownResult = await query<{ count: string }>(
+      "SELECT COUNT(*) as count FROM face_clusters WHERE label IS NOT NULL AND label != ''"
+    );
+    const knownPersons = parseInt(knownResult[0]?.count || '0', 10);
 
     const stats = {
       total_documents: parseInt(docCount[0]?.count || '0', 10),

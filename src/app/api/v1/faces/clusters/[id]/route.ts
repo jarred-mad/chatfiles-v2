@@ -5,14 +5,11 @@ import { query } from '@/lib/database';
 interface ClusterRow {
   id: string;
   label: string | null;
-  sample_image_path: string | null;
   face_count: number;
-  is_known_person: boolean;
 }
 
 interface FaceRow {
   id: string;
-  face_crop_path: string | null;
   document_id: string | null;
   document_filename: string | null;
   page_number: number | null;
@@ -52,7 +49,7 @@ export async function GET(
   try {
     // Get cluster
     const clusterResult = await query<ClusterRow>(
-      `SELECT id, label, sample_image_path, face_count, is_known_person
+      `SELECT id, label, face_count
        FROM face_clusters
        WHERE id = $1`,
       [id]
@@ -81,7 +78,7 @@ export async function GET(
     let faces: FaceRow[] = [];
     if (includeFaces) {
       faces = await query<FaceRow>(
-        `SELECT f.id, f.face_crop_path, f.document_id, d.filename as document_filename,
+        `SELECT f.id, f.document_id, d.filename as document_filename,
                 ei.page_number, f.confidence
          FROM faces f
          LEFT JOIN documents d ON f.document_id = d.id
@@ -109,13 +106,11 @@ export async function GET(
     const response = {
       id: cluster.id,
       label: cluster.label,
-      sample_image_url: cluster.sample_image_path,
       face_count: cluster.face_count,
       document_count: parseInt(docCountResult[0]?.count || '0', 10),
-      is_known_person: cluster.is_known_person,
+      is_known_person: cluster.label !== null && cluster.label !== '',
       faces: includeFaces ? faces.map(f => ({
         id: f.id,
-        image_url: f.face_crop_path,
         document_id: f.document_id,
         document_filename: f.document_filename,
         page_number: f.page_number,

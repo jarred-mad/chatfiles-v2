@@ -6,7 +6,7 @@ interface ImageRow {
   document_id: string;
   document_filename: string;
   page_number: number | null;
-  image_path_r2: string | null;
+  file_path_r2: string | null;
   width: number | null;
   height: number | null;
   has_faces: boolean;
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
         ei.document_id,
         d.filename as document_filename,
         ei.page_number,
-        ei.image_path_r2,
+        ei.file_path_r2,
         ei.width,
         ei.height,
         ei.has_faces,
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
         document_id: img.document_id,
         document_name: img.document_filename,
         page_number: img.page_number || 1,
-        image_path: img.image_path_r2,
+        image_path: img.file_path_r2,
         width: img.width || 300,
         height: img.height || 200,
         has_faces: img.has_faces,

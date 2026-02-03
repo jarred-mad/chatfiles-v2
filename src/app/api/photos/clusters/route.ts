@@ -4,9 +4,8 @@ import { query } from '@/lib/database';
 interface ClusterRow {
   id: string;
   label: string | null;
-  sample_image_path: string | null;
   face_count: number;
-  is_known_person: boolean;
+  representative_face_id: string | null;
 }
 
 export async function GET(request: NextRequest) {
@@ -19,7 +18,7 @@ export async function GET(request: NextRequest) {
   const offset = (page - 1) * limit;
 
   try {
-    const whereClause = knownOnly ? 'WHERE is_known_person = true' : '';
+    const whereClause = knownOnly ? "WHERE label IS NOT NULL AND label != ''" : '';
 
     // Get total count
     const countQuery = `SELECT COUNT(*) as total FROM face_clusters ${whereClause}`;
@@ -28,10 +27,10 @@ export async function GET(request: NextRequest) {
 
     // Get clusters
     const clustersQuery = `
-      SELECT id, label, sample_image_path, face_count, is_known_person
+      SELECT id, label, face_count, representative_face_id
       FROM face_clusters
       ${whereClause}
-      ORDER BY is_known_person DESC, face_count DESC
+      ORDER BY (label IS NOT NULL AND label != '') DESC, face_count DESC
       LIMIT $1 OFFSET $2
     `;
     const clusters = await query<ClusterRow>(clustersQuery, [limit, offset]);
@@ -40,9 +39,9 @@ export async function GET(request: NextRequest) {
       clusters: clusters.map(c => ({
         id: c.id,
         label: c.label,
-        sample_image_path: c.sample_image_path,
+        sample_image_path: null, // Would need to look up from representative_face_id
         face_count: c.face_count,
-        is_known: c.is_known_person,
+        is_known: c.label !== null && c.label !== '',
       })),
       total,
       page,

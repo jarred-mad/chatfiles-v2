@@ -6,7 +6,7 @@ interface ImageRow {
   id: string;
   document_id: string;
   page_number: number | null;
-  image_path_r2: string | null;
+  file_path_r2: string | null;
   width: number | null;
   height: number | null;
   has_faces: boolean;
@@ -15,7 +15,10 @@ interface ImageRow {
 interface FaceRow {
   id: string;
   image_id: string;
-  bounding_box: { x: number; y: number; width: number; height: number } | null;
+  bbox_x: number | null;
+  bbox_y: number | null;
+  bbox_width: number | null;
+  bbox_height: number | null;
   cluster_id: string | null;
   cluster_label: string | null;
   confidence: number | null;
@@ -47,7 +50,7 @@ export async function GET(
   try {
     // Build WHERE clause
     let whereClause = 'WHERE document_id = $1';
-    const params_arr: (string | boolean)[] = [id];
+    const params_arr: string[] = [id];
 
     if (hasFaces === 'true') {
       whereClause += ' AND has_faces = true';
@@ -55,7 +58,7 @@ export async function GET(
 
     // Get images for document
     const imagesResult = await query<ImageRow>(
-      `SELECT id, document_id, page_number, image_path_r2, width, height, has_faces
+      `SELECT id, document_id, page_number, file_path_r2, width, height, has_faces
        FROM extracted_images
        ${whereClause}
        ORDER BY page_number`,
@@ -88,7 +91,8 @@ export async function GET(
 
     if (imageIds.length > 0) {
       const facesResult = await query<FaceRow>(
-        `SELECT f.id, f.image_id, f.bounding_box, f.cluster_id, fc.label as cluster_label, f.confidence
+        `SELECT f.id, f.image_id, f.bbox_x, f.bbox_y, f.bbox_width, f.bbox_height,
+                f.cluster_id, fc.label as cluster_label, f.confidence
          FROM faces f
          LEFT JOIN face_clusters fc ON f.cluster_id = fc.id
          WHERE f.image_id = ANY($1::text[])`,
@@ -107,13 +111,18 @@ export async function GET(
       id: img.id,
       document_id: img.document_id,
       page_number: img.page_number,
-      image_url: img.image_path_r2,
+      image_url: img.file_path_r2,
       width: img.width,
       height: img.height,
       has_faces: img.has_faces,
       faces: (facesMap[img.id] || []).map(f => ({
         id: f.id,
-        bounding_box: f.bounding_box,
+        bounding_box: f.bbox_x !== null ? {
+          x: f.bbox_x,
+          y: f.bbox_y,
+          width: f.bbox_width,
+          height: f.bbox_height,
+        } : null,
         cluster_id: f.cluster_id,
         cluster_label: f.cluster_label,
         confidence: f.confidence,
