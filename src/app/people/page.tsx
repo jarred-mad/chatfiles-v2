@@ -1,18 +1,22 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { Metadata } from "next";
 import { notableNames, categories } from "@/lib/notable-names";
 
-export const metadata: Metadata = {
-  title: "100 Notable Names in the Epstein Files | ChatFiles.org",
-  description: "Comprehensive list of 100 notable individuals mentioned in the DOJ Epstein Files releases. Searchable database of public records.",
-};
+// Group by category
+const byCategory = categories.map(cat => ({
+  ...cat,
+  people: notableNames.filter(p => p.category === cat.id).sort((a, b) => a.rank - b.rank),
+})).filter(cat => cat.people.length > 0);
 
 export default function PeoplePage() {
-  // Group by category for the sidebar
-  const byCategory = categories.map(cat => ({
-    ...cat,
-    people: notableNames.filter(p => p.category === cat.id).sort((a, b) => a.rank - b.rank),
-  })).filter(cat => cat.people.length > 0);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+  // Filter people based on selected category
+  const filteredCategories = activeCategory
+    ? byCategory.filter(cat => cat.id === activeCategory)
+    : byCategory;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -47,23 +51,41 @@ export default function PeoplePage() {
       </section>
 
       <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Category Filter */}
+        {/* Category Filter Buttons */}
         <div className="flex flex-wrap gap-2 mb-8">
+          {/* All button */}
+          <button
+            onClick={() => setActiveCategory(null)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+              activeCategory === null
+                ? "bg-navy text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
+          >
+            All ({notableNames.length})
+          </button>
           {byCategory.map(cat => (
-            <a
+            <button
               key={cat.id}
-              href={`#${cat.id.toLowerCase().replace(/\s+/g, '-')}`}
-              className="px-3 py-1.5 rounded-full text-white text-sm font-medium hover:opacity-80 transition-opacity"
-              style={{ backgroundColor: cat.color }}
+              onClick={() => setActiveCategory(activeCategory === cat.id ? null : cat.id)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                activeCategory === cat.id
+                  ? "ring-2 ring-offset-2 ring-gray-400"
+                  : "hover:opacity-80"
+              }`}
+              style={{
+                backgroundColor: cat.color,
+                color: "white"
+              }}
             >
               {cat.label} ({cat.people.length})
-            </a>
+            </button>
           ))}
         </div>
 
         {/* Names Grid by Category */}
-        {byCategory.map(cat => (
-          <section key={cat.id} id={cat.id.toLowerCase().replace(/\s+/g, '-')} className="mb-12">
+        {filteredCategories.map(cat => (
+          <section key={cat.id} className="mb-12">
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <span className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }}></span>
               {cat.label}
