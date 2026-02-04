@@ -201,7 +201,7 @@ function SearchContent() {
     fetchResults();
   }, [query, page, selectedType, selectedDatasets, selectedSort]);
 
-  const updateUrl = (newParams: Record<string, string>) => {
+  const updateFilters = (newParams: Record<string, string>) => {
     const params = new URLSearchParams(searchParams.toString());
     Object.entries(newParams).forEach(([key, value]) => {
       if (value) {
@@ -210,8 +210,15 @@ function SearchContent() {
         params.delete(key);
       }
     });
-    params.set('page', '1'); // Reset to first page on filter change
-    router.push(`/search?${params.toString()}`);
+    // Reset to page 1 when changing filters
+    params.set('page', '1');
+    router.push(`/search?${params.toString()}`, { scroll: false });
+  };
+
+  const goToPage = (pageNum: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('page', String(pageNum));
+    router.push(`/search?${params.toString()}`, { scroll: false });
   };
 
   const toggleDataset = (ds: number) => {
@@ -219,7 +226,7 @@ function SearchContent() {
       ? selectedDatasets.filter((d) => d !== ds)
       : [...selectedDatasets, ds];
     setSelectedDatasets(newDatasets);
-    updateUrl({ datasets: newDatasets.join(',') });
+    updateFilters({ datasets: newDatasets.join(',') });
   };
 
   const getTypeBadgeClass = (docType: string) => {
@@ -287,7 +294,7 @@ function SearchContent() {
                   value={selectedType}
                   onChange={(e) => {
                     setSelectedType(e.target.value);
-                    updateUrl({ type: e.target.value });
+                    updateFilters({ type: e.target.value });
                   }}
                   className="w-full border border-gray-300 rounded-md p-2 text-sm"
                 >
@@ -324,7 +331,7 @@ function SearchContent() {
                   value={selectedSort}
                   onChange={(e) => {
                     setSelectedSort(e.target.value);
-                    updateUrl({ sort: e.target.value });
+                    updateFilters({ sort: e.target.value });
                   }}
                   className="w-full border border-gray-300 rounded-md p-2 text-sm"
                 >
@@ -488,73 +495,62 @@ function SearchContent() {
                 {totalPages > 1 && (
                   <div className="flex flex-col items-center gap-4 pt-6">
                     <div className="flex items-center gap-1 flex-wrap justify-center">
-                      {/* First page */}
-                      {page > 3 && (
-                        <>
-                          <button
-                            onClick={() => updateUrl({ page: '1' })}
-                            className="px-3 py-2 rounded-md border border-gray-300 text-sm font-medium hover:bg-gray-50"
-                          >
-                            1
-                          </button>
-                          {page > 4 && <span className="px-2 text-gray-400">...</span>}
-                        </>
-                      )}
+                      {(() => {
+                        const pages: (number | string)[] = [];
 
-                      {/* Page numbers around current */}
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        let pageNum: number;
-                        if (totalPages <= 5) {
-                          pageNum = i + 1;
-                        } else if (page <= 3) {
-                          pageNum = i + 1;
-                        } else if (page >= totalPages - 2) {
-                          pageNum = totalPages - 4 + i;
+                        if (totalPages <= 7) {
+                          // Show all pages
+                          for (let i = 1; i <= totalPages; i++) pages.push(i);
                         } else {
-                          pageNum = page - 2 + i;
+                          // Always show first page
+                          pages.push(1);
+
+                          if (page > 4) pages.push('...');
+
+                          // Pages around current
+                          const start = Math.max(2, page - 1);
+                          const end = Math.min(totalPages - 1, page + 1);
+                          for (let i = start; i <= end; i++) pages.push(i);
+
+                          if (page < totalPages - 3) pages.push('...');
+
+                          // Always show last page
+                          pages.push(totalPages);
                         }
 
-                        if (pageNum < 1 || pageNum > totalPages) return null;
-
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => updateUrl({ page: String(pageNum) })}
-                            className={`px-3 py-2 rounded-md text-sm font-medium ${
-                              page === pageNum
-                                ? 'bg-navy text-white'
-                                : 'border border-gray-300 hover:bg-gray-50'
-                            }`}
-                          >
-                            {pageNum}
-                          </button>
+                        return pages.map((pageNum, idx) =>
+                          pageNum === '...' ? (
+                            <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">...</span>
+                          ) : (
+                            <button
+                              key={pageNum}
+                              onClick={() => goToPage(pageNum as number)}
+                              className={`px-3 py-2 rounded-md text-sm font-medium ${
+                                page === pageNum
+                                  ? 'bg-navy text-white'
+                                  : 'border border-gray-300 hover:bg-gray-50'
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          )
                         );
-                      })}
-
-                      {/* Last page */}
-                      {page < totalPages - 2 && totalPages > 5 && (
-                        <>
-                          {page < totalPages - 3 && <span className="px-2 text-gray-400">...</span>}
-                          <button
-                            onClick={() => updateUrl({ page: String(totalPages) })}
-                            className="px-3 py-2 rounded-md border border-gray-300 text-sm font-medium hover:bg-gray-50"
-                          >
-                            {totalPages}
-                          </button>
-                        </>
-                      )}
+                      })()}
                     </div>
 
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => updateUrl({ page: String(page - 1) })}
+                        onClick={() => goToPage(page - 1)}
                         disabled={page === 1}
                         className="px-4 py-2 rounded-md border border-gray-300 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                       >
                         &larr; Previous
                       </button>
+                      <span className="text-sm text-gray-500">
+                        Page {page} of {totalPages}
+                      </span>
                       <button
-                        onClick={() => updateUrl({ page: String(page + 1) })}
+                        onClick={() => goToPage(page + 1)}
                         disabled={page === totalPages}
                         className="px-4 py-2 rounded-md border border-gray-300 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                       >

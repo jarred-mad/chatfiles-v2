@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AdSlot, { AdBanner } from '@/components/ui/AdSlot';
 
@@ -16,6 +16,8 @@ interface Photo {
   has_faces: boolean;
   dataset_number: number;
   face_count: number;
+  scene_type?: string;
+  document_type?: string;
 }
 
 interface Cluster {
@@ -31,22 +33,78 @@ interface Dataset {
   count: number;
 }
 
+// Photo type categories with icons - quick filter buttons
+const PHOTO_TYPE_BUTTONS = [
+  { id: 'all', label: 'All Photos', icon: '📷' },
+  { id: 'people', label: 'People', icon: '👥' },
+  { id: 'mansion', label: 'Mansions', icon: '🏛️' },
+  { id: 'yacht', label: 'Yachts', icon: '🛥️' },
+  { id: 'airplane', label: 'Airplanes', icon: '✈️' },
+  { id: 'island', label: 'Islands', icon: '🏝️' },
+  { id: 'party', label: 'Parties', icon: '🎉' },
+  { id: 'documents', label: 'Documents', icon: '📄' },
+  { id: 'office', label: 'Offices', icon: '🏢' },
+  { id: 'bedroom', label: 'Bedrooms', icon: '🛏️' },
+  { id: 'pool', label: 'Pools', icon: '🏊' },
+  { id: 'dining', label: 'Dining', icon: '🍽️' },
+];
+
 function PhotosContent() {
   const searchParams = useSearchParams();
-  const [viewMode, setViewMode] = useState<'all' | 'by-person'>(
-    searchParams.get('view') === 'by-person' ? 'by-person' : 'all'
+  const router = useRouter();
+
+  // Read state from URL
+  const urlType = searchParams.get('type') || 'all';
+  const urlPage = parseInt(searchParams.get('page') || '1', 10);
+  const urlView = searchParams.get('view') || 'gallery';
+
+  const [selectedType, setSelectedType] = useState(urlType);
+  const [viewMode, setViewMode] = useState<'gallery' | 'by-person'>(
+    urlView === 'by-person' ? 'by-person' : 'gallery'
   );
   const [selectedDataset, setSelectedDataset] = useState<number | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [clusters, setClusters] = useState<Cluster[]>([]);
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(urlPage);
+  const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Sync state with URL changes
+  useEffect(() => {
+    setPage(urlPage);
+    setSelectedType(urlType);
+  }, [urlPage, urlType]);
+
+  // Update URL when filters change
+  const updateUrl = (newType: string, newPage: number) => {
+    const params = new URLSearchParams();
+    if (newType !== 'all') params.set('type', newType);
+    if (newPage > 1) params.set('page', String(newPage));
+    if (viewMode === 'by-person') params.set('view', 'by-person');
+    const queryString = params.toString();
+    router.push(`/photos${queryString ? `?${queryString}` : ''}`, { scroll: false });
+  };
+
+  // Handle type selection
+  const handleTypeSelect = (typeId: string) => {
+    setSelectedType(typeId);
+    setPage(1);
+    updateUrl(typeId, 1);
+  };
+
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+    updateUrl(selectedType, newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Fetch photos
   useEffect(() => {
-    if (viewMode !== 'all') return;
+    if (viewMode === 'by-person') return;
 
     const fetchPhotos = async () => {
       setLoading(true);
@@ -55,13 +113,16 @@ function PhotosContent() {
         params.set('page', page.toString());
         params.set('limit', '24');
         if (selectedDataset) params.set('dataset', selectedDataset.toString());
+        if (selectedType !== 'all') params.set('scene', selectedType);
+        if (searchQuery) params.set('q', searchQuery);
 
         const res = await fetch(`/api/photos?${params}`);
         const data = await res.json();
 
         if (data.results) {
           setPhotos(data.results);
-          setTotal(data.total);
+          setTotal(data.total || 0);
+          setTotalPages(Math.ceil((data.total || 0) / 24));
           if (data.datasets) setDatasets(data.datasets);
         }
       } catch (error) {
@@ -72,7 +133,7 @@ function PhotosContent() {
     };
 
     fetchPhotos();
-  }, [viewMode, selectedDataset, page]);
+  }, [viewMode, selectedDataset, selectedType, page, searchQuery]);
 
   // Fetch clusters for "by person" view
   useEffect(() => {
@@ -97,8 +158,28 @@ function PhotosContent() {
     fetchClusters();
   }, [viewMode]);
 
-  const handleLoadMore = () => {
-    setPage((p) => p + 1);
+  // Generate pagination numbers
+  const getPaginationNumbers = () => {
+    const pages: (number | string)[] = [];
+
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+
+      if (page > 4) pages.push('...');
+
+      const start = Math.max(2, page - 1);
+      const end = Math.min(totalPages - 1, page + 1);
+
+      for (let i = start; i <= end; i++) pages.push(i);
+
+      if (page < totalPages - 3) pages.push('...');
+
+      pages.push(totalPages);
+    }
+
+    return pages;
   };
 
   return (
@@ -109,25 +190,54 @@ function PhotosContent() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 py-6">
         <div className="max-w-7xl mx-auto px-4">
-          <h1 className="text-2xl font-bold text-gray-900">Photo Gallery</h1>
-          <p className="text-gray-500 mt-1">
-            Browse {total.toLocaleString()} extracted images from the document archive
-          </p>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Photo Gallery</h1>
+              <p className="text-gray-500 mt-1">
+                {total.toLocaleString()} images from the document archive
+              </p>
+            </div>
+
+            {/* Search Box */}
+            <div className="w-full md:w-72">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search photos..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-navy focus:border-navy"
+                />
+                <svg className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
 
           {/* View Toggle */}
-          <div className="flex gap-4 mt-4">
+          <div className="flex gap-2 mt-4">
             <button
-              onClick={() => setViewMode('all')}
+              onClick={() => {
+                setViewMode('gallery');
+                setPage(1);
+              }}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'all'
+                viewMode === 'gallery'
                   ? 'bg-navy text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              All Photos
+              Gallery View
             </button>
             <button
-              onClick={() => setViewMode('by-person')}
+              onClick={() => {
+                setViewMode('by-person');
+                setPage(1);
+              }}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 viewMode === 'by-person'
                   ? 'bg-navy text-white'
@@ -140,138 +250,207 @@ function PhotosContent() {
         </div>
       </div>
 
+      {/* Photo Type Filter Buttons */}
+      {viewMode === 'gallery' && (
+        <div className="bg-gray-100 border-b border-gray-200 py-4">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex flex-wrap gap-2">
+              {PHOTO_TYPE_BUTTONS.map((type) => (
+                <button
+                  key={type.id}
+                  onClick={() => handleTypeSelect(type.id)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    selectedType === type.id
+                      ? 'bg-navy text-white shadow-md scale-105'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:border-navy hover:text-navy'
+                  }`}
+                >
+                  <span>{type.icon}</span>
+                  <span>{type.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-4 py-6">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-navy"></div>
           </div>
-        ) : viewMode === 'all' ? (
+        ) : viewMode === 'gallery' ? (
           <>
             {/* Dataset Filter */}
-            <div className="mb-6 flex flex-wrap gap-2">
-              <button
-                onClick={() => {
-                  setSelectedDataset(null);
-                  setPage(1);
-                }}
-                className={`px-3 py-1 rounded-full text-sm ${
-                  selectedDataset === null
-                    ? 'bg-navy text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                All Datasets
-              </button>
-              {datasets.map((ds) => (
+            {datasets.length > 0 && (
+              <div className="mb-6 flex flex-wrap gap-2">
                 <button
-                  key={ds.number}
                   onClick={() => {
-                    setSelectedDataset(ds.number);
+                    setSelectedDataset(null);
                     setPage(1);
                   }}
                   className={`px-3 py-1 rounded-full text-sm ${
-                    selectedDataset === ds.number
+                    selectedDataset === null
                       ? 'bg-navy text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  Dataset {ds.number} ({ds.count.toLocaleString()})
+                  All Datasets
                 </button>
-              ))}
-            </div>
-
-            {/* Photo Grid */}
-            {photos.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {photos.map((photo, index) => (
-                  <div key={photo.id}>
-                    <Link
-                      href={`/documents/${photo.document_id}`}
-                      className="block bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow"
-                    >
-                      <div
-                        className="bg-gray-200 relative"
-                        style={{ paddingBottom: `${(photo.height / photo.width) * 100}%` }}
-                      >
-                        {photo.image_path ? (
-                          <img
-                            src={photo.image_path}
-                            alt={`Image from ${photo.document_name}`}
-                            className="absolute inset-0 w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                            <svg
-                              className="w-12 h-12"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={1.5}
-                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                              />
-                            </svg>
-                          </div>
-                        )}
-                        {photo.has_faces && (
-                          <span className="absolute top-2 right-2 bg-accent text-white text-xs px-2 py-0.5 rounded">
-                            {photo.face_count} face{photo.face_count !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                      </div>
-                      <div className="p-3">
-                        <p className="text-sm text-gray-900 truncate">{photo.document_name}</p>
-                        <p className="text-xs text-gray-500">Page {photo.page_number}</p>
-                      </div>
-                    </Link>
-
-                    {/* Ad every 8 photos on mobile */}
-                    {(index + 1) % 8 === 0 && (
-                      <div className="col-span-2 md:col-span-3 lg:col-span-4 my-4 flex justify-center">
-                        <AdSlot size="incontent" id={`photos-inline-${index}`} />
-                      </div>
-                    )}
-                  </div>
+                {datasets.map((ds) => (
+                  <button
+                    key={ds.number}
+                    onClick={() => {
+                      setSelectedDataset(ds.number);
+                      setPage(1);
+                    }}
+                    className={`px-3 py-1 rounded-full text-sm ${
+                      selectedDataset === ds.number
+                        ? 'bg-navy text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Dataset {ds.number} ({ds.count.toLocaleString()})
+                  </button>
                 ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <svg
-                  className="w-16 h-16 text-gray-300 mx-auto mb-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-                <p className="text-gray-500">No images found. Image extraction is still in progress.</p>
               </div>
             )}
 
-            {/* Load More */}
-            {photos.length > 0 && photos.length < total && (
-              <div className="mt-8 text-center">
-                <button
-                  onClick={handleLoadMore}
-                  className="px-6 py-2 bg-navy text-white rounded-md hover:bg-navy-light transition-colors"
-                >
-                  Load More Photos
-                </button>
+            {/* Current Filter Indicator */}
+            {selectedType !== 'all' && (
+              <div className="mb-4 flex items-center gap-2">
+                <span className="text-gray-500">Showing:</span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-navy/10 text-navy rounded-full text-sm font-medium">
+                  {PHOTO_TYPE_BUTTONS.find(t => t.id === selectedType)?.icon}
+                  {PHOTO_TYPE_BUTTONS.find(t => t.id === selectedType)?.label}
+                  <button
+                    onClick={() => handleTypeSelect('all')}
+                    className="ml-1 hover:text-red-600"
+                  >
+                    x
+                  </button>
+                </span>
+              </div>
+            )}
+
+            {/* Photo Grid */}
+            {photos.length > 0 ? (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {photos.map((photo, index) => (
+                    <div key={photo.id}>
+                      <Link
+                        href={`/documents/${photo.document_id}`}
+                        className="block bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+                      >
+                        <div
+                          className="bg-gray-200 relative"
+                          style={{ paddingBottom: `${Math.min((photo.height / photo.width) * 100, 150)}%` }}
+                        >
+                          {photo.image_path ? (
+                            <img
+                              src={photo.image_path}
+                              alt={`Image from ${photo.document_name}`}
+                              className="absolute inset-0 w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                              <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                          )}
+                          {photo.has_faces && (
+                            <span className="absolute top-2 right-2 bg-accent text-white text-xs px-2 py-0.5 rounded">
+                              {photo.face_count} face{photo.face_count !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
+                        <div className="p-3">
+                          <p className="text-sm text-gray-900 truncate">{photo.document_name}</p>
+                          <p className="text-xs text-gray-500">Page {photo.page_number}</p>
+                        </div>
+                      </Link>
+
+                      {(index + 1) % 8 === 0 && (
+                        <div className="col-span-2 md:col-span-3 lg:col-span-4 my-4 flex justify-center">
+                          <AdSlot size="incontent" id={`photos-inline-${index}`} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex flex-col items-center gap-4 pt-8">
+                    <div className="flex items-center gap-1 flex-wrap justify-center">
+                      {getPaginationNumbers().map((pageNum, idx) => (
+                        pageNum === '...' ? (
+                          <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">...</span>
+                        ) : (
+                          <button
+                            key={pageNum}
+                            onClick={() => handlePageChange(pageNum as number)}
+                            className={`px-3 py-2 rounded-md text-sm font-medium ${
+                              page === pageNum
+                                ? 'bg-navy text-white'
+                                : 'border border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        )
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handlePageChange(page - 1)}
+                        disabled={page === 1}
+                        className="px-4 py-2 rounded-md border border-gray-300 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        &larr; Previous
+                      </button>
+                      <span className="text-sm text-gray-500">
+                        Page {page} of {totalPages}
+                      </span>
+                      <button
+                        onClick={() => handlePageChange(page + 1)}
+                        disabled={page === totalPages}
+                        className="px-4 py-2 rounded-md border border-gray-300 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        Next &rarr;
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p className="text-gray-500">
+                  {selectedType !== 'all'
+                    ? `No ${PHOTO_TYPE_BUTTONS.find(t => t.id === selectedType)?.label.toLowerCase()} photos found.`
+                    : 'No images found. Image extraction is still in progress.'}
+                </p>
+                {selectedType !== 'all' && (
+                  <button
+                    onClick={() => handleTypeSelect('all')}
+                    className="mt-4 text-navy hover:text-navy-light font-medium"
+                  >
+                    View all photos
+                  </button>
+                )}
               </div>
             )}
           </>
         ) : (
+          /* By Person View */
           <>
-            {/* Person Clusters */}
             {clusters.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {clusters.map((cluster) => (
@@ -281,7 +460,6 @@ function PhotosContent() {
                     className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow"
                   >
                     <div className="flex items-center p-4 gap-4">
-                      {/* Face preview */}
                       <div className="w-20 h-20 bg-gray-200 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden">
                         {cluster.sample_image_path ? (
                           <img
@@ -290,18 +468,8 @@ function PhotosContent() {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <svg
-                            className="w-8 h-8 text-gray-400"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={1.5}
-                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                            />
+                          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
                         )}
                       </div>
@@ -318,18 +486,8 @@ function PhotosContent() {
                           </span>
                         )}
                       </div>
-                      <svg
-                        className="w-5 h-5 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </div>
                   </Link>
@@ -337,18 +495,8 @@ function PhotosContent() {
               </div>
             ) : (
               <div className="text-center py-12">
-                <svg
-                  className="w-16 h-16 text-gray-300 mx-auto mb-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
+                <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 <p className="text-gray-500">No face clusters found. Face detection is still in progress.</p>
               </div>
