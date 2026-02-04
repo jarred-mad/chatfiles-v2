@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/database';
 
+// R2 public URL for serving images
+const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL?.trim() || 'https://pub-e8b8792b476a4216b2cbd491f9d61af0.r2.dev';
+
+function getFullImageUrl(path: string | null): string | null {
+  if (!path) return null;
+  // If already a full URL, return as is
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  // Prepend R2 public URL
+  return `${R2_PUBLIC_URL}/${path}`;
+}
+
 interface ImageRow {
   id: string;
   document_id: string;
@@ -97,7 +110,7 @@ export async function GET(request: NextRequest) {
         document_id: img.document_id,
         document_name: img.document_filename,
         page_number: img.page_number || 1,
-        image_path: img.file_path_r2,
+        image_path: getFullImageUrl(img.file_path_r2),
         width: img.width || 300,
         height: img.height || 200,
         has_faces: img.has_faces,
