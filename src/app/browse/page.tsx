@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import AdSlot, { AdBanner } from '@/components/ui/AdSlot';
 import { query } from '@/lib/database';
+import { notableNames } from '@/lib/notable-names';
 
 async function getBrowseData() {
   try {
-    const [datasets, types, topNames] = await Promise.all([
+    const [datasets, types] = await Promise.all([
       // Get documents by dataset
       query<{ dataset_number: number; count: string }>(
         `SELECT dataset_number, COUNT(*) as count
@@ -19,14 +20,6 @@ async function getBrowseData() {
          GROUP BY document_type
          ORDER BY count DESC`
       ),
-      // Get top mentioned names
-      query<{ name: string; total: string; doc_count: string }>(
-        `SELECT name, SUM(frequency) as total, COUNT(DISTINCT document_id) as doc_count
-         FROM mentioned_names
-         GROUP BY name
-         ORDER BY total DESC
-         LIMIT 20`
-      ),
     ]);
 
     return {
@@ -38,15 +31,10 @@ async function getBrowseData() {
         type: t.document_type,
         count: parseInt(t.count, 10),
       })),
-      topNames: topNames.map(n => ({
-        name: n.name,
-        mentions: parseInt(n.total, 10),
-        documents: parseInt(n.doc_count, 10),
-      })),
     };
   } catch (error) {
     console.error('Failed to fetch browse data:', error);
-    return { datasets: [], types: [], topNames: [] };
+    return { datasets: [], types: [] };
   }
 }
 
@@ -162,53 +150,51 @@ export default async function BrowsePage() {
           </section>
         )}
 
-        {/* Browse by Person */}
-        {data.topNames.length > 0 && (
-          <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">By Person</h2>
-              <Link href="/search" className="text-sm text-accent hover:text-accent-hover">
-                Search All &rarr;
-              </Link>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm">
-              <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-200">
-                <div className="p-4">
-                  {data.topNames.slice(0, 10).map((person, i) => (
-                    <Link
-                      key={person.name}
-                      href={`/search?q=${encodeURIComponent(person.name)}`}
-                      className={`flex items-center justify-between py-2 hover:bg-gray-50 px-2 rounded ${
-                        i < 9 ? 'border-b border-gray-100' : ''
-                      }`}
-                    >
-                      <span className="text-gray-900">{person.name}</span>
-                      <span className="text-sm text-gray-500">
-                        {person.mentions.toLocaleString()} mentions
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-                <div className="p-4">
-                  {data.topNames.slice(10, 20).map((person, i) => (
-                    <Link
-                      key={person.name}
-                      href={`/search?q=${encodeURIComponent(person.name)}`}
-                      className={`flex items-center justify-between py-2 hover:bg-gray-50 px-2 rounded ${
-                        i < 9 ? 'border-b border-gray-100' : ''
-                      }`}
-                    >
-                      <span className="text-gray-900">{person.name}</span>
-                      <span className="text-sm text-gray-500">
-                        {person.mentions.toLocaleString()} mentions
-                      </span>
-                    </Link>
-                  ))}
-                </div>
+        {/* Browse by Person - Using curated notable names */}
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Notable Names</h2>
+            <Link href="/people" className="text-sm text-accent hover:text-accent-hover">
+              View All 100 &rarr;
+            </Link>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-200">
+              <div className="p-4">
+                {notableNames.slice(0, 10).map((person, i) => (
+                  <Link
+                    key={person.name}
+                    href={`/search?q=${encodeURIComponent(person.name)}`}
+                    className={`flex items-center justify-between py-2 hover:bg-gray-50 px-2 rounded ${
+                      i < 9 ? 'border-b border-gray-100' : ''
+                    }`}
+                  >
+                    <span className="text-gray-900">{person.name}</span>
+                    <span className="text-xs text-gray-500 truncate ml-2 max-w-[150px]">
+                      {person.category}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+              <div className="p-4">
+                {notableNames.slice(10, 20).map((person, i) => (
+                  <Link
+                    key={person.name}
+                    href={`/search?q=${encodeURIComponent(person.name)}`}
+                    className={`flex items-center justify-between py-2 hover:bg-gray-50 px-2 rounded ${
+                      i < 9 ? 'border-b border-gray-100' : ''
+                    }`}
+                  >
+                    <span className="text-gray-900">{person.name}</span>
+                    <span className="text-xs text-gray-500 truncate ml-2 max-w-[150px]">
+                      {person.category}
+                    </span>
+                  </Link>
+                ))}
               </div>
             </div>
-          </section>
-        )}
+          </div>
+        </section>
 
         {/* Empty state */}
         {data.datasets.length === 0 && data.types.length === 0 && (
