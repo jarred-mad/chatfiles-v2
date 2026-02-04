@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import AdSlot from "@/components/ui/AdSlot";
+import AgeVerification from "@/components/ui/AgeVerification";
 import Script from "next/script";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -84,6 +85,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.className} min-h-screen flex flex-col`}>
+        <AgeVerification />
         <Header />
 
         {/* Leaderboard ad below header */}
