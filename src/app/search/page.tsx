@@ -1,10 +1,11 @@
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import Link from 'next/link';
 import SearchBar from '@/components/ui/SearchBar';
 import AdSlot, { AdBanner } from '@/components/ui/AdSlot';
+import { notableNames, getCategoryInfo, type NotablePerson } from '@/lib/notable-names';
 
 interface SearchResult {
   id: string;
@@ -48,6 +49,99 @@ const SORT_OPTIONS = [
   { value: 'confidence', label: 'OCR Confidence' },
 ];
 
+// Find a notable person matching the search query
+function findNotablePerson(query: string): NotablePerson | null {
+  if (!query || query.length < 3) return null;
+  const normalizedQuery = query.toLowerCase().trim();
+
+  // Exact match first
+  const exactMatch = notableNames.find(
+    p => p.name.toLowerCase() === normalizedQuery
+  );
+  if (exactMatch) return exactMatch;
+
+  // Partial match (query contains full name or name contains query)
+  const partialMatch = notableNames.find(
+    p => p.name.toLowerCase().includes(normalizedQuery) ||
+         normalizedQuery.includes(p.name.toLowerCase())
+  );
+  return partialMatch || null;
+}
+
+// Person Synopsis Component
+function PersonSynopsis({ person, documentCount }: { person: NotablePerson; documentCount: number }) {
+  const categoryInfo = getCategoryInfo(person.category);
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 overflow-hidden">
+      {/* Header */}
+      <div className="bg-navy text-white px-6 py-4">
+        <div className="flex items-center gap-3">
+          <span className={`px-2 py-1 rounded text-xs font-medium ${categoryInfo?.color || 'bg-gray-500'}`}>
+            {person.category}
+          </span>
+          <h2 className="text-xl font-bold">{person.name}</h2>
+        </div>
+      </div>
+
+      {/* Synopsis */}
+      <div className="px-6 py-4 border-b border-gray-100">
+        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+          Synopsis
+        </h3>
+        <p className="text-gray-700 leading-relaxed">
+          {person.description}
+        </p>
+        {documentCount > 0 && (
+          <p className="mt-3 text-sm text-gray-500">
+            Found in <span className="font-semibold text-navy">{documentCount.toLocaleString()}</span> document{documentCount !== 1 ? 's' : ''} in the Epstein Files.
+          </p>
+        )}
+      </div>
+
+      {/* Context of Involvement */}
+      <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">
+          Context of Mentions
+        </h3>
+        <p className="text-sm text-gray-600 leading-relaxed">
+          Names appear in these files through various contexts including: contact books and phone directories,
+          flight logs, email correspondence, photographs, FBI tip-line reports (often unverified),
+          court documents, deposition transcripts, financial records, and social correspondence.
+          The nature of each mention varies significantly and should be evaluated individually.
+        </p>
+      </div>
+
+      {/* Disclaimer */}
+      <div className="px-6 py-4 bg-amber-50 border-t border-amber-100">
+        <div className="flex gap-3">
+          <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <div>
+            <h4 className="text-sm font-semibold text-amber-800 mb-1">Important Disclaimer</h4>
+            <p className="text-sm text-amber-700 leading-relaxed">
+              <strong>Being mentioned in these files does not indicate wrongdoing or criminal conduct.</strong> Many
+              individuals appear solely as contacts, acquaintances, or in incidental references. Some mentions
+              come from unverified FBI hotline tips that were never corroborated. Apart from Ghislaine Maxwell,
+              none of the individuals listed on this site have been charged with crimes connected to the Epstein
+              investigation. This information is provided for transparency and public interest research purposes only.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Legal Notice */}
+      <div className="px-6 py-3 bg-gray-100 border-t border-gray-200">
+        <p className="text-xs text-gray-500">
+          Source: U.S. Department of Justice releases under the Epstein Files Transparency Act (Dec 2025 - Jan 2026).
+          This synopsis is compiled from publicly available information and does not constitute legal findings or accusations.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -69,6 +163,9 @@ function SearchContent() {
   const [selectedDatasets, setSelectedDatasets] = useState<number[]>(datasets);
   const [selectedSort, setSelectedSort] = useState(sort);
   const [showFilters, setShowFilters] = useState(false);
+
+  // Check if query matches a notable person
+  const matchedPerson = useMemo(() => findNotablePerson(query), [query]);
 
   // Fetch search results (also works without query to browse all)
   useEffect(() => {
@@ -313,6 +410,11 @@ function SearchContent() {
               </div>
             ) : (
               <div className="space-y-4">
+                {/* Person Synopsis for Notable Names */}
+                {matchedPerson && (
+                  <PersonSynopsis person={matchedPerson} documentCount={total} />
+                )}
+
                 {results.map((result, index) => (
                   <div key={result.id}>
                     <Link
