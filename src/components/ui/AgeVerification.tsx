@@ -4,22 +4,18 @@ import { useState, useEffect } from 'react';
 
 export default function AgeVerification() {
   const [showModal, setShowModal] = useState(false);
-  const [verified, setVerified] = useState(false);
 
   useEffect(() => {
     // Check if user has already verified
     const isVerified = localStorage.getItem('age_verified');
     if (!isVerified) {
       setShowModal(true);
-    } else {
-      setVerified(true);
     }
   }, []);
 
   const handleVerify = () => {
     localStorage.setItem('age_verified', 'true');
     setShowModal(false);
-    setVerified(true);
   };
 
   const handleDecline = () => {

@@ -25,7 +25,23 @@ interface ImageRow {
   has_faces: boolean;
   dataset_number: number;
   face_count: string;
+  scene_type: string | null;
 }
+
+// Map frontend filter IDs to database scene_type values
+const SCENE_TYPE_MAP: Record<string, string[]> = {
+  people: ['a photograph of people'],
+  mansion: ['a mansion or estate', 'a house or residential building'],
+  yacht: ['a yacht or boat'],
+  airplane: ['an airplane interior'],
+  island: ['a private island', 'a beach or coastal area'],
+  party: ['a party or social gathering', 'a formal event or gala'],
+  documents: ['a scanned document or letter', 'a handwritten note', 'a legal document', 'a fax or printed communication'],
+  office: ['an office or workplace', 'a meeting or conference'],
+  bedroom: ['a hotel room or bedroom'],
+  pool: ['a pool or swimming area'],
+  dining: ['a restaurant or dining area'],
+};
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -35,6 +51,7 @@ export async function GET(request: NextRequest) {
   const dataset = searchParams.get('dataset');
   const hasFaces = searchParams.get('has_faces');
   const documentId = searchParams.get('document');
+  const scene = searchParams.get('scene'); // Scene type filter
 
   const offset = (page - 1) * limit;
 
@@ -58,6 +75,15 @@ export async function GET(request: NextRequest) {
       conditions.push(`ei.document_id = $${paramIndex}`);
       params.push(documentId);
       paramIndex++;
+    }
+
+    // Scene type filter
+    if (scene && scene !== 'all' && SCENE_TYPE_MAP[scene]) {
+      const sceneTypes = SCENE_TYPE_MAP[scene];
+      const placeholders = sceneTypes.map((_, i) => `$${paramIndex + i}`).join(', ');
+      conditions.push(`(ei.scene_type IN (${placeholders}) OR ei.document_type_class IN (${placeholders}))`);
+      params.push(...sceneTypes, ...sceneTypes);
+      paramIndex += sceneTypes.length * 2;
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -84,6 +110,7 @@ export async function GET(request: NextRequest) {
         ei.height,
         ei.has_faces,
         d.dataset_number,
+        ei.scene_type,
         (SELECT COUNT(*) FROM faces f WHERE f.image_id = ei.id) as face_count
       FROM extracted_images ei
       JOIN documents d ON ei.document_id = d.id
@@ -116,6 +143,7 @@ export async function GET(request: NextRequest) {
         has_faces: img.has_faces,
         dataset_number: img.dataset_number,
         face_count: parseInt(img.face_count, 10),
+        scene_type: img.scene_type,
       })),
       total,
       page,
