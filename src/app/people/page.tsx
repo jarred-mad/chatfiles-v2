@@ -11,7 +11,7 @@ export default function PeoplePage() {
   // Group by category for the sidebar
   const byCategory = categories.map(cat => ({
     ...cat,
-    people: notableNames.filter(p => p.category.toLowerCase() === cat.id).sort((a, b) => a.rank - b.rank),
+    people: notableNames.filter(p => p.category === cat.id).sort((a, b) => a.rank - b.rank),
   })).filter(cat => cat.people.length > 0);
 
   return (
@@ -52,8 +52,9 @@ export default function PeoplePage() {
           {byCategory.map(cat => (
             <a
               key={cat.id}
-              href={`#${cat.id}`}
-              className={`px-3 py-1.5 rounded-full text-white text-sm font-medium ${cat.color} hover:opacity-80 transition-opacity`}
+              href={`#${cat.id.toLowerCase().replace(/\s+/g, '-')}`}
+              className="px-3 py-1.5 rounded-full text-white text-sm font-medium hover:opacity-80 transition-opacity"
+              style={{ backgroundColor: cat.color }}
             >
               {cat.label} ({cat.people.length})
             </a>
@@ -62,9 +63,9 @@ export default function PeoplePage() {
 
         {/* Names Grid by Category */}
         {byCategory.map(cat => (
-          <section key={cat.id} id={cat.id} className="mb-12">
+          <section key={cat.id} id={cat.id.toLowerCase().replace(/\s+/g, '-')} className="mb-12">
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <span className={`w-3 h-3 rounded-full ${cat.color}`}></span>
+              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }}></span>
               {cat.label}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

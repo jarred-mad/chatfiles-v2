@@ -141,17 +141,17 @@ export const notableNames: NotablePerson[] = rawNames.map(p => ({
 }));
 
 export const categories = [
-  { id: "politician", label: "Politicians", color: "bg-blue-500" },
-  { id: "royalty", label: "Royalty", color: "bg-purple-500" },
-  { id: "tech", label: "Tech Billionaires", color: "bg-green-500" },
-  { id: "business", label: "Business & Finance", color: "bg-yellow-500" },
-  { id: "entertainment", label: "Entertainment", color: "bg-pink-500" },
-  { id: "media", label: "Media", color: "bg-orange-500" },
-  { id: "academic", label: "Academics & Scientists", color: "bg-cyan-500" },
-  { id: "legal", label: "Legal", color: "bg-indigo-500" },
-  { id: "diplomat", label: "Diplomats", color: "bg-teal-500" },
-  { id: "author", label: "Authors & Wellness", color: "bg-lime-500" },
-  { id: "inner circle", label: "Epstein's Inner Circle", color: "bg-red-500" },
+  { id: "Politician", label: "Politicians", color: "#3b82f6" },
+  { id: "Royalty", label: "Royalty", color: "#a855f7" },
+  { id: "Tech", label: "Tech Billionaires", color: "#22c55e" },
+  { id: "Business", label: "Business & Finance", color: "#eab308" },
+  { id: "Entertainment", label: "Entertainment", color: "#ec4899" },
+  { id: "Media", label: "Media", color: "#f97316" },
+  { id: "Academic", label: "Academics & Scientists", color: "#06b6d4" },
+  { id: "Legal", label: "Legal", color: "#6366f1" },
+  { id: "Diplomat", label: "Diplomats", color: "#14b8a6" },
+  { id: "Author", label: "Authors & Wellness", color: "#84cc16" },
+  { id: "Inner Circle", label: "Epstein's Inner Circle", color: "#ef4444" },
 ];
 
 export function getPersonBySlug(slug: string): NotablePerson | undefined {
@@ -163,5 +163,5 @@ export function getPersonByName(name: string): NotablePerson | undefined {
 }
 
 export function getCategoryInfo(categoryId: string) {
-  return categories.find(c => c.id === categoryId.toLowerCase());
+  return categories.find(c => c.id === categoryId || c.id.toLowerCase() === categoryId.toLowerCase());
 }
