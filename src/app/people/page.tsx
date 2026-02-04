@@ -4,6 +4,27 @@ import { useState } from "react";
 import Link from "next/link";
 import { notableNames, categories } from "@/lib/notable-names";
 
+const R2_URL = "https://pub-e8b8792b476a4216b2cbd491f9d61af0.r2.dev";
+
+// Map person names to their photo filenames (handles special cases)
+const PHOTO_MAP: Record<string, string> = {
+  "Jean-Luc Brunel": "Jean-Luc_Brunel_2001.jpg",
+  "Leon Black": "Leon _Black.jpg",
+  "Nadia Marcinkova": "Nadia_Marcinko.jpg",
+  "Dr. Mehmet Oz": "Mehmet_Oz.jpg",
+  "Mortimer Zuckerman": "Mort_Zuckerman.jpg",
+};
+
+function getPhotoUrl(name: string): string {
+  // Check special cases first
+  if (PHOTO_MAP[name]) {
+    return `${R2_URL}/people/${PHOTO_MAP[name]}`;
+  }
+  // Convert name to filename format: "Bill Clinton" -> "Bill_Clinton.jpg"
+  const filename = name.replace(/\s+/g, '_').replace(/[.]/g, '') + '.jpg';
+  return `${R2_URL}/people/${filename}`;
+}
+
 // Group by category
 const byCategory = categories.map(cat => ({
   ...cat,
@@ -95,14 +116,26 @@ export default function PeoplePage() {
                 <Link
                   key={person.name}
                   href={`/search?q=${encodeURIComponent(person.name)}`}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md hover:border-accent transition-all group"
+                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md hover:border-accent transition-all group"
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 group-hover:text-accent transition-colors">
+                  <div className="flex items-center gap-3">
+                    {/* Photo */}
+                    <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                      <img
+                        src={getPhotoUrl(person.name)}
+                        alt={person.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Hide broken images
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 group-hover:text-accent transition-colors truncate">
                         {person.name}
                       </h3>
-                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                      <p className="text-sm text-gray-600 mt-0.5 line-clamp-2">
                         {person.description}
                       </p>
                     </div>
