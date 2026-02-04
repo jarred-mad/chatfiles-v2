@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { notableNames, categories } from "@/lib/notable-names";
+import { AdBanner, InContentAd } from "@/components/ui/AdSlot";
 
 const R2_URL = "https://pub-e8b8792b476a4216b2cbd491f9d61af0.r2.dev";
 
@@ -49,7 +50,7 @@ export default function PeoplePage() {
           </h1>
           <p className="text-gray-300 max-w-3xl">
             Compiled from DOJ releases under the Epstein Files Transparency Act (Dec 2025 – Jan 2026).
-            Click any name to search for related documents.
+            Click any name to view their profile and related documents.
           </p>
         </div>
       </section>
@@ -70,6 +71,11 @@ export default function PeoplePage() {
           </div>
         </div>
       </section>
+
+      {/* Top Ad Banner */}
+      <div className="max-w-6xl mx-auto px-4 pt-6">
+        <AdBanner />
+      </div>
 
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Category Filter Buttons */}
@@ -105,7 +111,12 @@ export default function PeoplePage() {
         </div>
 
         {/* Names Grid by Category */}
-        {filteredCategories.map(cat => (
+        {filteredCategories.map((cat, catIndex) => (
+          <>
+            {/* Show ad after every 3 categories */}
+            {catIndex > 0 && catIndex % 3 === 0 && (
+              <InContentAd key={`ad-${catIndex}`} className="mb-8" />
+            )}
           <section key={cat.id} className="mb-12">
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
               <span className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color }}></span>
@@ -115,7 +126,7 @@ export default function PeoplePage() {
               {cat.people.map(person => (
                 <Link
                   key={person.name}
-                  href={`/search?q=${encodeURIComponent(person.name)}`}
+                  href={`/people/${person.slug}`}
                   className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md hover:border-accent transition-all group"
                 >
                   <div className="flex items-center gap-3">
@@ -140,13 +151,14 @@ export default function PeoplePage() {
                       </p>
                     </div>
                     <svg className="w-5 h-5 text-gray-400 group-hover:text-accent transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
                 </Link>
               ))}
             </div>
           </section>
+          </>
         ))}
 
         {/* Sources */}

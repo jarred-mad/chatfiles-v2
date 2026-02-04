@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import SearchBar from '../ui/SearchBar';
 
 const languages = [
@@ -11,19 +11,93 @@ const languages = [
   { code: 'zh', label: '中文', flag: '🇨🇳' },
 ];
 
+// Extend Window interface for Google Translate
+declare global {
+  interface Window {
+    googleTranslateElementInit?: () => void;
+    google?: {
+      translate?: {
+        TranslateElement: new (options: {
+          pageLanguage: string;
+          includedLanguages: string;
+          layout: number;
+          autoDisplay: boolean;
+        }, elementId: string) => void;
+        InlineLayout?: { SIMPLE: number };
+      };
+    };
+  }
+}
+
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [currentLang, setCurrentLang] = useState('en');
 
+  // Initialize Google Translate
+  useEffect(() => {
+    // Add Google Translate script
+    const addScript = () => {
+      if (document.getElementById('google-translate-script')) return;
+
+      const script = document.createElement('script');
+      script.id = 'google-translate-script';
+      script.src = '//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+      script.async = true;
+      document.body.appendChild(script);
+    };
+
+    // Initialize Google Translate element
+    window.googleTranslateElementInit = () => {
+      if (window.google?.translate?.TranslateElement) {
+        new window.google.translate.TranslateElement(
+          {
+            pageLanguage: 'en',
+            includedLanguages: 'en,es,fr,zh-CN,de,pt,ar,ru,ja,ko',
+            layout: window.google.translate.InlineLayout?.SIMPLE || 0,
+            autoDisplay: false,
+          },
+          'google_translate_element'
+        );
+      }
+    };
+
+    addScript();
+  }, []);
+
+  // Function to trigger Google Translate
+  const translatePage = (langCode: string) => {
+    setCurrentLang(langCode);
+    setLangMenuOpen(false);
+
+    // Map our language codes to Google Translate codes
+    const googleLangMap: Record<string, string> = {
+      'en': 'en',
+      'es': 'es',
+      'fr': 'fr',
+      'zh': 'zh-CN',
+    };
+
+    const googleLang = googleLangMap[langCode] || langCode;
+
+    // Find and click the Google Translate dropdown
+    const select = document.querySelector('.goog-te-combo') as HTMLSelectElement;
+    if (select) {
+      select.value = googleLang;
+      select.dispatchEvent(new Event('change'));
+    }
+  };
+
   const navLinks = [
     { href: '/', label: 'Home' },
     { href: '/search', label: 'Search' },
     { href: '/people', label: 'People' },
-    { href: '/browse', label: 'Documents' },
+    { href: '/browse', label: 'Docs' },
     { href: '/photos', label: 'Photos' },
-    { href: '/videos', label: 'Videos' },
-    { href: '/articles', label: 'Articles', highlight: true },
+    { href: '/videos', label: 'Vids', highlight: true },
+    { href: '/audio', label: 'Audio', highlight: true },
+    { href: '/articles', label: 'Articles' },
+    { href: '/creators', label: 'Creator', highlight: true },
     { href: '/about', label: 'About' },
   ];
 
@@ -70,10 +144,7 @@ export default function Header() {
                 {languages.map((lang) => (
                   <button
                     key={lang.code}
-                    onClick={() => {
-                      setCurrentLang(lang.code);
-                      setLangMenuOpen(false);
-                    }}
+                    onClick={() => translatePage(lang.code)}
                     className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-100 ${
                       currentLang === lang.code ? 'bg-gray-50 text-navy font-medium' : 'text-gray-700'
                     }`}
@@ -135,7 +206,7 @@ export default function Header() {
                 {languages.map((lang) => (
                   <button
                     key={lang.code}
-                    onClick={() => setCurrentLang(lang.code)}
+                    onClick={() => translatePage(lang.code)}
                     className={`px-2 py-1 rounded text-sm ${
                       currentLang === lang.code
                         ? 'bg-white text-navy font-medium'

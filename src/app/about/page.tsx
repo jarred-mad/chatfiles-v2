@@ -1,6 +1,11 @@
+import { AdBanner } from '@/components/ui/AdSlot';
+
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Ad Banner */}
+      <AdBanner className="py-4 bg-gray-100" />
+
       <div className="max-w-4xl mx-auto px-4 py-12">
         {/* Header */}
         <div className="text-center mb-12">
@@ -66,76 +71,6 @@ export default function AboutPage() {
             </p>
           </section>
 
-          {/* How We Process Files */}
-          <section className="bg-white rounded-lg shadow-sm p-6 md:p-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">How We Process Files</h2>
-            <p className="text-gray-600 leading-relaxed mb-4">
-              Our processing pipeline ensures maximum searchability and accessibility:
-            </p>
-            <div className="space-y-4">
-              <div className="flex gap-4">
-                <div className="w-8 h-8 bg-navy text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                  1
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">OCR Processing</h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    We use OCRmyPDF to extract text from scanned documents. This creates
-                    a searchable text layer while preserving the original document format.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="w-8 h-8 bg-navy text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                  2
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Image Extraction</h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Embedded images are extracted from PDFs using PyMuPDF, preserving
-                    original quality and metadata.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="w-8 h-8 bg-navy text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                  3
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Facial Recognition</h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    InsightFace detects and clusters faces across the archive. Known
-                    individuals are labeled based on reference photos from public sources.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="w-8 h-8 bg-navy text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                  4
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Name Extraction</h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    Named entity recognition (NER) using spaCy identifies person names
-                    mentioned in documents, enabling search by name.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="w-8 h-8 bg-navy text-white rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">
-                  5
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">Full-Text Indexing</h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    All extracted text is indexed in Meilisearch for fast, typo-tolerant
-                    full-text search across the entire archive.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
-
           {/* DOJ Privacy Notice */}
           <section id="doj-notice" className="bg-amber-50 border border-amber-300 rounded-lg p-6 md:p-8">
             <div className="flex items-start gap-3 mb-4">
@@ -190,35 +125,9 @@ export default function AboutPage() {
                 agency.</strong> We are an independent organization providing public access
                 to already-public documents.
               </p>
-              <p>
-                <strong>For legal inquiries</strong>, please contact us at{' '}
-                <a href="mailto:legal@chatfiles.org" className="underline">
-                  legal@chatfiles.org
-                </a>
-              </p>
             </div>
           </section>
 
-          {/* Privacy */}
-          <section id="privacy" className="bg-white rounded-lg shadow-sm p-6 md:p-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Privacy Policy</h2>
-            <div className="space-y-4 text-gray-600">
-              <p>
-                ChatFiles.org respects your privacy. We collect minimal data necessary
-                to operate the service:
-              </p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>Search queries (anonymized, for improving search quality)</li>
-                <li>Basic analytics (page views, for understanding usage)</li>
-                <li>IP addresses (for rate limiting and abuse prevention)</li>
-              </ul>
-              <p>
-                We do not sell or share personal data with third parties. We use
-                Google AdSense for advertising, which may use cookies according to
-                Google&apos;s privacy policy.
-              </p>
-            </div>
-          </section>
 
           {/* Support */}
           <section className="bg-navy text-white rounded-lg p-6 md:p-8">
@@ -241,36 +150,6 @@ export default function AboutPage() {
             </a>
           </section>
 
-          {/* Contact */}
-          <section className="bg-white rounded-lg shadow-sm p-6 md:p-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Contact</h2>
-            <div className="space-y-3 text-gray-600">
-              <p>
-                <strong>General inquiries:</strong>{' '}
-                <a href="mailto:contact@chatfiles.org" className="text-accent hover:text-accent-hover">
-                  contact@chatfiles.org
-                </a>
-              </p>
-              <p>
-                <strong>Press inquiries:</strong>{' '}
-                <a href="mailto:press@chatfiles.org" className="text-accent hover:text-accent-hover">
-                  press@chatfiles.org
-                </a>
-              </p>
-              <p>
-                <strong>Legal inquiries:</strong>{' '}
-                <a href="mailto:legal@chatfiles.org" className="text-accent hover:text-accent-hover">
-                  legal@chatfiles.org
-                </a>
-              </p>
-              <p>
-                <strong>Technical issues:</strong>{' '}
-                <a href="mailto:tech@chatfiles.org" className="text-accent hover:text-accent-hover">
-                  tech@chatfiles.org
-                </a>
-              </p>
-            </div>
-          </section>
         </div>
       </div>
     </div>

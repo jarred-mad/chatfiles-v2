@@ -3,7 +3,6 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import AdSlot from "@/components/ui/AdSlot";
 import AgeVerification from "@/components/ui/AgeVerification";
 import Script from "next/script";
 
@@ -76,32 +75,19 @@ export default function RootLayout({
             gtag('config', 'G-GFZS9CDFWN');
           `}
         </Script>
-        {/* Google AdSense */}
-        <Script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5314062114057461"
-          crossOrigin="anonymous"
-          strategy="lazyOnload"
-        />
       </head>
       <body className={`${inter.className} min-h-screen flex flex-col`}>
+        {/* Hidden Google Translate element */}
+        <div id="google_translate_element" style={{ display: 'none' }}></div>
         <AgeVerification />
         <Header />
-
-        {/* Leaderboard ad below header */}
-        <div className="bg-gray-50 py-2 flex justify-center">
-          <AdSlot size="leaderboard" id="header-leaderboard" />
-        </div>
-
-        {/* Main content */}
         <main className="flex-1">{children}</main>
-
-        {/* Mobile banner ad */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-center py-1 z-40">
-          <AdSlot size="mobile-banner" id="mobile-footer" />
-        </div>
-
         <Footer />
+        {/* Bottom Social Bar Ad */}
+        <Script
+          src="https://pl28650027.effectivegatecpm.com/11/bd/29/11bd29569e9a68dcd33307036a87daff.js"
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   );

@@ -2,138 +2,173 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-type AdSize = 'leaderboard' | 'sidebar' | 'incontent' | 'mobile-banner' | 'large-rectangle' | 'billboard';
+// Generate unique ID for each ad instance
+let adCounter = 0;
+const getAdId = () => `ad-${++adCounter}-${Date.now()}`;
 
-interface AdSlotProps {
-  size: AdSize;
-  id: string;
-  className?: string;
+// Default AdSlot - returns null (no generic ads)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function AdSlot({ className = '' }: { className?: string }) {
+  return null;
 }
 
-const AD_DIMENSIONS: Record<AdSize, { width: number; height: number; label: string; mobileOnly?: boolean; desktopOnly?: boolean }> = {
-  leaderboard: { width: 728, height: 90, label: 'Leaderboard 728x90', desktopOnly: true },
-  billboard: { width: 970, height: 250, label: 'Billboard 970x250', desktopOnly: true },
-  sidebar: { width: 300, height: 250, label: 'Medium Rectangle 300x250' },
-  'large-rectangle': { width: 336, height: 280, label: 'Large Rectangle 336x280' },
-  incontent: { width: 300, height: 250, label: 'In-Content 300x250' },
-  'mobile-banner': { width: 320, height: 100, label: 'Mobile Banner 320x100', mobileOnly: true },
-};
+// AdBanner - shows leaderboard on desktop, mobile banner on mobile
+export function AdBanner({ className = '' }: { className?: string }) {
+  return (
+    <div className={className}>
+      <div className="hidden md:flex justify-center">
+        <LeaderboardAd />
+      </div>
+      <div className="flex md:hidden justify-center">
+        <MobileBannerAd />
+      </div>
+    </div>
+  );
+}
 
-export default function AdSlot({ size, id, className = '' }: AdSlotProps) {
+// InContentAd - returns null until we have a code
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function InContentAd({ className = '' }: { className?: string }) {
+  return null;
+}
+
+// 728x90 Leaderboard display ad
+export function LeaderboardAd({ className = '' }: { className?: string }) {
   const adRef = useRef<HTMLDivElement>(null);
-  const [isVisible, setIsVisible] = useState(false);
+  const [adId] = useState(() => getAdId());
 
-  const dimensions = AD_DIMENSIONS[size];
-
-  // Lazy load - only show when in viewport
   useEffect(() => {
-    if (!adRef.current) return;
+    if (!adRef.current || adRef.current.querySelector('script')) return;
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: '100px' }
-    );
+    const container = adRef.current;
 
-    observer.observe(adRef.current);
-    return () => observer.disconnect();
-  }, []);
+    // Create script with unique options
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.innerHTML = `
+      atOptions = {
+        'key' : 'a93a7e8aeab3342ce1628214611315f8',
+        'format' : 'iframe',
+        'height' : 90,
+        'width' : 728,
+        'params' : {}
+      };
+    `;
+    container.appendChild(script);
 
-  // Load AdSense script when visible
-  useEffect(() => {
-    if (!isVisible) return;
-
-    try {
-      // @ts-expect-error - AdSense global
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    } catch {
-      // AdSense may not be loaded yet
-    }
-  }, [isVisible]);
-
-  const responsiveClasses = dimensions.mobileOnly
-    ? 'block md:hidden'
-    : dimensions.desktopOnly
-    ? 'hidden md:block'
-    : '';
+    const invokeScript = document.createElement('script');
+    invokeScript.type = 'text/javascript';
+    invokeScript.src = 'https://www.highperformanceformat.com/a93a7e8aeab3342ce1628214611315f8/invoke.js';
+    container.appendChild(invokeScript);
+  }, [adId]);
 
   return (
-    <div
-      ref={adRef}
-      className={`ad-container ${responsiveClasses} ${className}`}
-      style={{ minHeight: dimensions.height }}
-    >
-      {isVisible ? (
-        <>
-          {/* AdSense ad unit - replace data-ad-client with your publisher ID */}
-          <ins
-            className="adsbygoogle"
-            style={{
-              display: 'block',
-              width: '100%',
-              maxWidth: dimensions.width,
-              height: dimensions.height,
-              margin: '0 auto'
-            }}
-            data-ad-client="ca-pub-5314062114057461"
-            data-ad-slot={id}
-            data-ad-format="auto"
-            data-full-width-responsive="true"
-          />
-          {/* Placeholder shown until AdSense loads */}
-          <div
-            className="ad-placeholder flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-dashed border-gray-300 rounded-lg"
-            style={{
-              width: '100%',
-              maxWidth: dimensions.width,
-              height: dimensions.height,
-              margin: '0 auto'
-            }}
-          >
-            <div className="text-center">
-              <div className="text-gray-400 text-xs uppercase tracking-wide mb-1">Advertisement</div>
-              <div className="text-gray-500 text-sm font-medium">{dimensions.label}</div>
-            </div>
-          </div>
-        </>
-      ) : (
-        <div
-          className="bg-gray-100 animate-pulse rounded-lg"
-          style={{
-            width: '100%',
-            maxWidth: dimensions.width,
-            height: dimensions.height,
-            margin: '0 auto'
-          }}
-        />
-      )}
+    <div ref={adRef} id={adId} className={`ad-container ${className}`} style={{ width: 728, minHeight: 90 }}>
     </div>
   );
 }
 
-// Sticky sidebar ad wrapper
-export function StickySidebarAd({ children }: { children: React.ReactNode }) {
+// 300x250 Sidebar display ad
+export function SidebarAd({ className = '' }: { className?: string }) {
+  const adRef = useRef<HTMLDivElement>(null);
+  const [adId] = useState(() => getAdId());
+
+  useEffect(() => {
+    if (!adRef.current || adRef.current.querySelector('script')) return;
+
+    const container = adRef.current;
+
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.innerHTML = `
+      atOptions = {
+        'key' : '6ea2a3d08ec0f485f70f464045a48a80',
+        'format' : 'iframe',
+        'height' : 250,
+        'width' : 300,
+        'params' : {}
+      };
+    `;
+    container.appendChild(script);
+
+    const invokeScript = document.createElement('script');
+    invokeScript.type = 'text/javascript';
+    invokeScript.src = 'https://www.highperformanceformat.com/6ea2a3d08ec0f485f70f464045a48a80/invoke.js';
+    container.appendChild(invokeScript);
+  }, [adId]);
+
   return (
-    <div className="sticky top-4">
-      {children}
+    <div ref={adRef} id={adId} className={`ad-container ${className}`} style={{ width: 300, minHeight: 250 }}>
     </div>
   );
 }
 
-// Ad banner between content sections
-export function AdBanner({ id, className = '' }: { id: string; className?: string }) {
+// 160x300 Skyscraper display ad
+export function SkyscraperAd({ className = '' }: { className?: string }) {
+  const adRef = useRef<HTMLDivElement>(null);
+  const [adId] = useState(() => getAdId());
+
+  useEffect(() => {
+    if (!adRef.current || adRef.current.querySelector('script')) return;
+
+    const container = adRef.current;
+
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.innerHTML = `
+      atOptions = {
+        'key' : 'b4f0e68ec325d0e8ae6160bd9cb72d26',
+        'format' : 'iframe',
+        'height' : 300,
+        'width' : 160,
+        'params' : {}
+      };
+    `;
+    container.appendChild(script);
+
+    const invokeScript = document.createElement('script');
+    invokeScript.type = 'text/javascript';
+    invokeScript.src = 'https://www.highperformanceformat.com/b4f0e68ec325d0e8ae6160bd9cb72d26/invoke.js';
+    container.appendChild(invokeScript);
+  }, [adId]);
+
   return (
-    <div className={`my-6 ${className}`}>
-      <div className="hidden md:block">
-        <AdSlot size="leaderboard" id={id} className="mx-auto" />
-      </div>
-      <div className="block md:hidden">
-        <AdSlot size="mobile-banner" id={id} className="mx-auto" />
-      </div>
+    <div ref={adRef} id={adId} className={`ad-container ${className}`} style={{ width: 160, minHeight: 300 }}>
+    </div>
+  );
+}
+
+// 320x50 Mobile banner ad
+export function MobileBannerAd({ className = '' }: { className?: string }) {
+  const adRef = useRef<HTMLDivElement>(null);
+  const [adId] = useState(() => getAdId());
+
+  useEffect(() => {
+    if (!adRef.current || adRef.current.querySelector('script')) return;
+
+    const container = adRef.current;
+
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.innerHTML = `
+      atOptions = {
+        'key' : '268ccc0aa6d01fd38fcf6d1521f57c7f',
+        'format' : 'iframe',
+        'height' : 50,
+        'width' : 320,
+        'params' : {}
+      };
+    `;
+    container.appendChild(script);
+
+    const invokeScript = document.createElement('script');
+    invokeScript.type = 'text/javascript';
+    invokeScript.src = 'https://www.highperformanceformat.com/268ccc0aa6d01fd38fcf6d1521f57c7f/invoke.js';
+    container.appendChild(invokeScript);
+  }, [adId]);
+
+  return (
+    <div ref={adRef} id={adId} className={`ad-container ${className}`} style={{ width: 320, minHeight: 50 }}>
     </div>
   );
 }
