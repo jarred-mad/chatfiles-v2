@@ -246,6 +246,15 @@ interface DocRow {
   dataset_number: number;
 }
 
+interface ArticleRow {
+  id: number;
+  slug: string;
+  person_name: string;
+  title: string;
+  category: string;
+  image_url: string;
+}
+
 export async function generateStaticParams() {
   return Object.keys(ARTICLES).map((slug) => ({ slug }));
 }
@@ -288,6 +297,8 @@ export default async function ArticlePage({ params }: PageProps) {
   let documentCount = 0;
   let sampleDocs: DocRow[] = [];
 
+  let allArticles: ArticleRow[] = [];
+
   try {
     const countResult = await query<DocCountRow>(
       `SELECT COUNT(*) as count FROM documents WHERE filename ILIKE $1 OR text_content ILIKE $1`,
@@ -301,6 +312,13 @@ export default async function ArticlePage({ params }: PageProps) {
        ORDER BY dataset_number LIMIT 5`,
       [`%${article.name}%`]
     );
+
+    // Fetch all articles for sidebar
+    allArticles = await query<ArticleRow>(
+      `SELECT id, slug, person_name, title, category, image_url
+       FROM articles
+       ORDER BY person_name ASC`
+    );
   } catch (e) {
     console.error('Database error:', e);
   }
@@ -313,8 +331,11 @@ export default async function ArticlePage({ params }: PageProps) {
       {/* Ad Banner */}
       <AdBanner className="py-4 bg-gray-100" />
 
-      {/* Article Header */}
-      <article className="max-w-4xl mx-auto">
+      {/* Main Layout with Sidebar */}
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Article Content - Left Side */}
+          <article className="flex-1 max-w-4xl">
         {/* Hero Image */}
         <div className="relative h-72 md:h-96 bg-gray-900">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -488,6 +509,67 @@ export default async function ArticlePage({ params }: PageProps) {
           count={4}
         />
       </article>
+
+          {/* Sidebar - Right Side */}
+          <aside className="lg:w-80 flex-shrink-0">
+            <div className="sticky top-20">
+              {/* All Articles List */}
+              <div className="bg-white rounded-lg shadow-lg p-4">
+                <h3 className="font-bold text-gray-900 mb-4 pb-2 border-b">
+                  All Articles ({allArticles.length})
+                </h3>
+                <div className="max-h-[calc(100vh-200px)] overflow-y-auto space-y-2">
+                  {allArticles.map((art) => (
+                    <Link
+                      key={art.id}
+                      href={`/articles/${art.slug}`}
+                      className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
+                        art.slug === slug
+                          ? 'bg-blue-50 border-l-4 border-blue-500'
+                          : 'hover:bg-gray-50'
+                      }`}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={art.image_url}
+                        alt={art.person_name}
+                        className="w-10 h-10 rounded-full object-cover bg-gray-200"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className={`text-sm font-medium truncate ${
+                          art.slug === slug ? 'text-blue-700' : 'text-gray-900'
+                        }`}>
+                          {art.person_name}
+                        </div>
+                        <div className="text-xs text-gray-500">{art.category}</div>
+                      </div>
+                    </Link>
+                  ))}
+
+                  {allArticles.length === 0 && (
+                    <p className="text-sm text-gray-500 text-center py-4">
+                      No articles found
+                    </p>
+                  )}
+                </div>
+
+                {/* View All Link */}
+                <div className="mt-4 pt-4 border-t">
+                  <Link
+                    href="/articles"
+                    className="block text-center text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    View All Articles →
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
     </div>
   );
 }
