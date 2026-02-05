@@ -4,6 +4,9 @@ import { notFound } from 'next/navigation';
 import { query } from '@/lib/database';
 import { AdBanner, WideSkyscraperAd } from '@/components/ui/AdSlot';
 
+// Force dynamic rendering - fetch from database on each request
+export const dynamic = 'force-dynamic';
+
 interface DbArticle {
   id: number;
   slug: string;
