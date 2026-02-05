@@ -61,6 +61,9 @@ export async function GET(request: NextRequest) {
     const params: (string | number)[] = [];
     let paramIndex = 1;
 
+    // Only show images that have actual R2 paths (thumbnails generated)
+    conditions.push(`ei.file_path_r2 IS NOT NULL`);
+
     if (dataset) {
       conditions.push(`d.dataset_number = $${paramIndex}`);
       params.push(parseInt(dataset, 10));
@@ -82,8 +85,8 @@ export async function GET(request: NextRequest) {
       const sceneTypes = SCENE_TYPE_MAP[scene];
       const placeholders = sceneTypes.map((_, i) => `$${paramIndex + i}`).join(', ');
       conditions.push(`(ei.scene_type IN (${placeholders}) OR ei.document_type_class IN (${placeholders}))`);
-      params.push(...sceneTypes, ...sceneTypes);
-      paramIndex += sceneTypes.length * 2;
+      params.push(...sceneTypes);
+      paramIndex += sceneTypes.length;
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -99,6 +102,7 @@ export async function GET(request: NextRequest) {
     const total = parseInt(countResult[0]?.total || '0', 10);
 
     // Get images with document info
+    // Prioritize images that have valid R2 paths (not null)
     const imagesQuery = `
       SELECT
         ei.id,
@@ -115,17 +119,18 @@ export async function GET(request: NextRequest) {
       FROM extracted_images ei
       JOIN documents d ON ei.document_id = d.id
       ${whereClause}
-      ORDER BY ei.created_at DESC
+      ORDER BY (ei.file_path_r2 IS NOT NULL) DESC, ei.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
 
     const images = await query<ImageRow>(imagesQuery, [...params, limit, offset]);
 
-    // Get dataset counts for filter
+    // Get dataset counts for filter (only count images with R2 paths)
     const datasetsQuery = `
       SELECT d.dataset_number, COUNT(*) as count
       FROM extracted_images ei
       JOIN documents d ON ei.document_id = d.id
+      WHERE ei.file_path_r2 IS NOT NULL
       GROUP BY d.dataset_number
       ORDER BY d.dataset_number
     `;
