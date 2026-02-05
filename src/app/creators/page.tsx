@@ -28,6 +28,28 @@ const TONE_OPTIONS = [
   { value: 'neutral', label: 'Neutral', description: 'Balanced, objective reporting' },
 ];
 
+// Keywords/topics that creators can search for with a person
+const SEARCH_TOPICS = [
+  { keyword: 'flight logs', icon: '✈️', description: 'Travel records and Lolita Express' },
+  { keyword: 'island', icon: '🏝️', description: 'Little St. James references' },
+  { keyword: 'mansion', icon: '🏠', description: 'NYC townhouse or Palm Beach' },
+  { keyword: 'black book', icon: '📒', description: 'Contact book entries' },
+  { keyword: 'email', icon: '📧', description: 'Email correspondence' },
+  { keyword: 'photo', icon: '📸', description: 'Photographs and images' },
+  { keyword: 'deposition', icon: '⚖️', description: 'Legal testimony' },
+  { keyword: 'FBI', icon: '🔍', description: 'FBI investigation files' },
+  { keyword: 'massage', icon: '💆', description: 'Massage-related mentions' },
+  { keyword: 'money', icon: '💰', description: 'Financial transactions' },
+  { keyword: 'donation', icon: '🎁', description: 'Charitable donations' },
+  { keyword: 'dinner', icon: '🍽️', description: 'Social events and dinners' },
+  { keyword: 'party', icon: '🎉', description: 'Party and event mentions' },
+  { keyword: 'meeting', icon: '🤝', description: 'Scheduled meetings' },
+  { keyword: 'phone', icon: '📞', description: 'Phone records and calls' },
+  { keyword: 'victim', icon: '👤', description: 'Victim statements' },
+  { keyword: 'witness', icon: '👁️', description: 'Witness testimony' },
+  { keyword: 'Maxwell', icon: '👩', description: 'Ghislaine Maxwell connections' },
+];
+
 export default function CreatorsPage() {
   const [selectedPerson, setSelectedPerson] = useState<NotablePerson | null>(null);
   const [duration, setDuration] = useState(60);
@@ -164,13 +186,77 @@ export default function CreatorsPage() {
                     <div className="text-xs text-blue-600 mt-2">
                       Found in {documentCount.toLocaleString()} documents
                     </div>
+
+                    {/* Quick Search Topics */}
+                    <div className="mt-4 pt-4 border-t border-blue-200">
+                      <div className="text-xs font-medium text-blue-800 mb-2">Quick Search Topics:</div>
+                      <div className="flex flex-wrap gap-2">
+                        {SEARCH_TOPICS.slice(0, 12).map((topic) => (
+                          <Link
+                            key={topic.keyword}
+                            href={`/search?q=${encodeURIComponent(selectedPerson.name + ' ' + topic.keyword)}`}
+                            target="_blank"
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-white hover:bg-blue-100 border border-blue-200 rounded text-xs text-blue-700 transition-colors"
+                            title={topic.description}
+                          >
+                            <span>{topic.icon}</span>
+                            <span>{topic.keyword}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
 
+              {/* Research Topics - Only shown when person selected */}
+              {selectedPerson && (
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h2 className="text-lg font-semibold mb-2">Research Topics</h2>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Click any topic to search for &quot;{selectedPerson.name}&quot; + that keyword
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {SEARCH_TOPICS.map((topic) => (
+                      <Link
+                        key={topic.keyword}
+                        href={`/search?q=${encodeURIComponent(selectedPerson.name + ' ' + topic.keyword)}`}
+                        target="_blank"
+                        className="flex items-center gap-2 p-3 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg transition-colors group"
+                      >
+                        <span className="text-xl">{topic.icon}</span>
+                        <div className="min-w-0">
+                          <div className="font-medium text-gray-800 group-hover:text-blue-700 text-sm capitalize">
+                            {topic.keyword}
+                          </div>
+                          <div className="text-xs text-gray-500 truncate">
+                            {topic.description}
+                          </div>
+                        </div>
+                        <svg className="w-4 h-4 text-gray-400 group-hover:text-blue-500 ml-auto flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </Link>
+                    ))}
+                  </div>
+                  <div className="mt-4 pt-4 border-t">
+                    <Link
+                      href={`/search?q=${encodeURIComponent(selectedPerson.name)}`}
+                      target="_blank"
+                      className="flex items-center justify-center gap-2 w-full py-2 bg-navy text-white rounded-lg hover:bg-navy-light transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                      </svg>
+                      View All {documentCount} Documents for {selectedPerson.name.split(' ')[0]}
+                    </Link>
+                  </div>
+                </div>
+              )}
+
               {/* Duration Selection */}
               <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-lg font-semibold mb-4">2. Choose Duration</h2>
+                <h2 className="text-lg font-semibold mb-4">{selectedPerson ? '2.' : '2.'} Choose Duration</h2>
                 <div className="space-y-2">
                   {DURATION_OPTIONS.map((option) => (
                     <label
