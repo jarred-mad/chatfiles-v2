@@ -138,6 +138,41 @@ export function SkyscraperAd({ className = '' }: { className?: string }) {
   );
 }
 
+// 468x60 Banner ad
+export function BannerAd468({ className = '' }: { className?: string }) {
+  const adRef = useRef<HTMLDivElement>(null);
+  const [adId] = useState(() => getAdId());
+
+  useEffect(() => {
+    if (!adRef.current || adRef.current.querySelector('script')) return;
+
+    const container = adRef.current;
+
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.innerHTML = `
+      atOptions = {
+        'key' : '1e03506bd1599ceabdf2f622ed71e1f4',
+        'format' : 'iframe',
+        'height' : 60,
+        'width' : 468,
+        'params' : {}
+      };
+    `;
+    container.appendChild(script);
+
+    const invokeScript = document.createElement('script');
+    invokeScript.type = 'text/javascript';
+    invokeScript.src = 'https://www.highperformanceformat.com/1e03506bd1599ceabdf2f622ed71e1f4/invoke.js';
+    container.appendChild(invokeScript);
+  }, [adId]);
+
+  return (
+    <div ref={adRef} id={adId} className={`ad-container ${className}`} style={{ width: 468, minHeight: 60 }}>
+    </div>
+  );
+}
+
 // 160x600 Wide Skyscraper display ad
 export function WideSkyscraperAd({ className = '' }: { className?: string }) {
   const adRef = useRef<HTMLDivElement>(null);
