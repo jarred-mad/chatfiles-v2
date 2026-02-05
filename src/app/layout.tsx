@@ -1,3 +1,4 @@
+// Build trigger: 2026-02-04-v2
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
