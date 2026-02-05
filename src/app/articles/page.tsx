@@ -4,127 +4,59 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { AdBanner } from '@/components/ui/AdSlot';
 
-const ARTICLES = [
-  {
-    slug: 'bill-clinton-flight-logs',
-    name: 'Bill Clinton',
-    title: 'Bill Clinton in the Epstein Files: Flight Logs and Document References',
-    description: 'An examination of former President Bill Clinton\'s appearances in the DOJ Epstein files.',
-    image: '/images/articles/Bill_Clinton.jpg',
-    category: 'Politicians',
-  },
-  {
-    slug: 'prince-andrew-settlement',
-    name: 'Prince Andrew',
-    title: 'Prince Andrew and the Epstein Connection',
-    description: 'A detailed look at Prince Andrew\'s appearances in the DOJ Epstein files.',
-    image: '/images/articles/Prince_Andrew.jpg',
-    category: 'Royalty',
-  },
-  {
-    slug: 'bill-gates-meetings',
-    name: 'Bill Gates',
-    title: 'Bill Gates and Jeffrey Epstein: Documented Meetings',
-    description: 'Examining the documented meetings between Microsoft founder Bill Gates and Jeffrey Epstein.',
-    image: '/images/articles/Bill_Gates.jpg',
-    category: 'Tech',
-  },
-  {
-    slug: 'donald-trump-relationship',
-    name: 'Donald Trump',
-    title: 'Donald Trump in the Epstein Files',
-    description: 'An analysis of former President Donald Trump\'s appearances in the DOJ Epstein files.',
-    image: '/images/articles/Donald_Trump.jpg',
-    category: 'Politicians',
-  },
-  {
-    slug: 'ghislaine-maxwell-role',
-    name: 'Ghislaine Maxwell',
-    title: 'Ghislaine Maxwell: The Key Figure',
-    description: 'Understanding Ghislaine Maxwell\'s central role in the Epstein case.',
-    image: '/images/articles/Ghislaine_Maxwell.jpg',
-    category: 'Inner Circle',
-  },
-  {
-    slug: 'alan-dershowitz-defense',
-    name: 'Alan Dershowitz',
-    title: 'Alan Dershowitz: Defense Attorney and Allegations',
-    description: 'How renowned attorney Alan Dershowitz appears in the Epstein files.',
-    image: '/images/articles/Alan_Dershowitz.jpg',
-    category: 'Legal',
-  },
-  {
-    slug: 'les-wexner-connection',
-    name: 'Les Wexner',
-    title: 'Les Wexner: The Billionaire Behind Epstein\'s Fortune',
-    description: 'How retail magnate Les Wexner became Epstein\'s biggest benefactor.',
-    image: '/images/articles/Les_Wexner.jpg',
-    category: 'Business',
-  },
-  {
-    slug: 'flight-logs-analysis',
-    name: 'Flight Logs',
-    title: 'The Epstein Flight Logs: Complete Analysis',
-    description: 'Deep dive into the flight records of Epstein\'s private aircraft.',
-    image: '/images/articles/Flight_Logs.jpg',
-    category: 'Evidence',
-  },
-  {
-    slug: 'black-book-contacts',
-    name: 'Black Book',
-    title: 'Epstein\'s Black Book: The Contact List',
-    description: 'Inside the infamous address book containing the world\'s most powerful people.',
-    image: '/images/articles/Black_Book.jpg',
-    category: 'Evidence',
-  },
-  {
-    slug: 'jean-luc-brunel-modeling',
-    name: 'Jean-Luc Brunel',
-    title: 'Jean-Luc Brunel: The Modeling Agent',
-    description: 'The dark story of French modeling agent Jean-Luc Brunel.',
-    image: '/images/articles/Jean_Luc_Brunel.jpg',
-    category: 'Inner Circle',
-  },
-  {
-    slug: 'private-islands-caribbean',
-    name: 'Private Islands',
-    title: 'Epstein\'s Private Islands: Little St. James',
-    description: 'Inside the Caribbean properties where Epstein allegedly conducted crimes.',
-    image: '/images/articles/Little_St_James.jpg',
-    category: 'Locations',
-  },
-  {
-    slug: 'epstein-prison-death',
-    name: 'Epstein Death',
-    title: 'The Death of Jeffrey Epstein: Questions Remain',
-    description: 'Examining the circumstances surrounding Epstein\'s death in federal custody.',
-    image: '/images/articles/MCC_New_York.jpg',
-    category: 'Investigation',
-  },
-];
+interface Article {
+  id: number;
+  slug: string;
+  person_name: string;
+  title: string;
+  summary: string;
+  category: string;
+  image_url: string;
+  document_count: number;
+  is_featured: boolean;
+  published_at: string;
+}
+
+interface ArticlesResponse {
+  articles: Article[];
+  total: number;
+  page: number;
+  totalPages: number;
+  categories: { name: string; count: number }[];
+}
 
 export default function ArticlesPage() {
-  const [featuredIndex, setFeaturedIndex] = useState(0);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [categories, setCategories] = useState<{ name: string; count: number }[]>([]);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    // Randomize featured article on each visit
-    const randomIndex = Math.floor(Math.random() * ARTICLES.length);
-    setFeaturedIndex(randomIndex);
-    setIsLoaded(true);
-  }, []);
+    fetchArticles();
+  }, [selectedCategory]);
 
-  // Get featured article and remaining articles
-  const featuredArticle = ARTICLES[featuredIndex];
-  const otherArticles = ARTICLES.filter((_, index) => index !== featuredIndex);
+  const fetchArticles = async () => {
+    setLoading(true);
+    try {
+      const url = selectedCategory
+        ? `/api/articles?category=${encodeURIComponent(selectedCategory)}`
+        : '/api/articles';
+      const res = await fetch(url);
+      const data: ArticlesResponse = await res.json();
+      setArticles(data.articles || []);
+      setCategories(data.categories || []);
+      setTotal(data.total || 0);
+    } catch (err) {
+      console.error('Failed to fetch articles:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-accent border-t-transparent rounded-full"></div>
-      </div>
-    );
-  }
+  // Get featured article (first one marked as featured, or first article)
+  const featuredArticle = articles.find(a => a.is_featured) || articles[0];
+  const otherArticles = articles.filter(a => a.id !== featuredArticle?.id);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -133,15 +65,9 @@ export default function ArticlesPage() {
         <div className="max-w-6xl mx-auto px-4 text-center">
           <h1 className="text-4xl font-bold mb-3">Epstein Files Articles</h1>
           <p className="text-gray-300 text-lg max-w-2xl mx-auto">
-            In-depth analysis of notable individuals mentioned in the DOJ Epstein files.
-            All articles are AI-generated based on publicly available documents.
+            In-depth analysis of {total} notable individuals mentioned in the DOJ Epstein files.
+            All articles are generated based on publicly available documents.
           </p>
-          <div className="mt-4 inline-flex items-center gap-2 bg-purple-600/30 text-purple-200 px-4 py-2 rounded-full text-sm">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            AI-Generated Content
-          </div>
         </div>
       </div>
 
@@ -149,68 +75,138 @@ export default function ArticlesPage() {
       <AdBanner className="py-4 bg-gray-100" />
 
       <div className="max-w-6xl mx-auto px-4 py-10">
-        {/* Featured Article - Now Randomized */}
-        <div className="mb-10">
-          <Link
-            href={`/articles/${featuredArticle.slug}`}
-            className="block bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
-          >
-            <div className="md:flex">
-              <div className="md:w-1/2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={featuredArticle.image}
-                  alt={featuredArticle.name}
-                  className="w-full h-64 md:h-full object-cover"
-                />
-              </div>
-              <div className="md:w-1/2 p-6 md:p-8 flex flex-col justify-center">
-                <span className="text-accent text-sm font-medium mb-2">Featured Article</span>
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
-                  {featuredArticle.title}
-                </h2>
-                <p className="text-gray-600 mb-4">{featuredArticle.description}</p>
-                <span className="text-accent font-medium">Read Article →</span>
-              </div>
+        {/* Category Filter */}
+        {categories.length > 0 && (
+          <div className="mb-8">
+            <div className="flex flex-wrap gap-2 justify-center">
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  !selectedCategory
+                    ? 'bg-navy text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-100 border'
+                }`}
+              >
+                All ({total})
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat.name}
+                  onClick={() => setSelectedCategory(cat.name)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    selectedCategory === cat.name
+                      ? 'bg-navy text-white'
+                      : 'bg-white text-gray-700 hover:bg-gray-100 border'
+                  }`}
+                >
+                  {cat.name} ({cat.count})
+                </button>
+              ))}
             </div>
-          </Link>
-        </div>
+          </div>
+        )}
 
-        {/* Article Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {otherArticles.map((article) => (
-            <Link
-              key={article.slug}
-              href={`/articles/${article.slug}`}
-              className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-            >
-              <div className="relative h-48">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={article.image}
-                  alt={article.name}
-                  className="w-full h-full object-cover"
-                />
-                <span className="absolute top-3 left-3 bg-black/60 text-white text-xs px-2 py-1 rounded">
-                  {article.category}
-                </span>
-              </div>
-              <div className="p-5">
-                <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{article.title}</h3>
-                <p className="text-gray-600 text-sm line-clamp-2">{article.description}</p>
-                <div className="mt-3 flex items-center justify-between">
-                  <span className="text-accent text-sm font-medium">Read →</span>
-                  <span className="text-xs text-purple-600 flex items-center gap-1">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    AI
-                  </span>
+        {loading ? (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(9)].map((_, i) => (
+              <div key={i} className="bg-white rounded-xl shadow-md overflow-hidden animate-pulse">
+                <div className="h-48 bg-gray-200"></div>
+                <div className="p-5">
+                  <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-full mb-1"></div>
+                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
                 </div>
               </div>
-            </Link>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : articles.length === 0 ? (
+          <div className="text-center py-12">
+            <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+            </svg>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Articles Yet</h3>
+            <p className="text-gray-500">Articles are being generated. Check back soon!</p>
+          </div>
+        ) : (
+          <>
+            {/* Featured Article */}
+            {featuredArticle && (
+              <div className="mb-10">
+                <Link
+                  href={`/articles/${featuredArticle.slug}`}
+                  className="block bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+                >
+                  <div className="md:flex">
+                    <div className="md:w-1/2 bg-gray-100">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={featuredArticle.image_url}
+                        alt={featuredArticle.person_name}
+                        className="w-full h-64 md:h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/images/placeholder.jpg';
+                        }}
+                      />
+                    </div>
+                    <div className="md:w-1/2 p-6 md:p-8 flex flex-col justify-center">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-accent text-sm font-medium">Featured</span>
+                        <span className="text-gray-400">|</span>
+                        <span className="text-gray-500 text-sm">{featuredArticle.category}</span>
+                      </div>
+                      <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+                        {featuredArticle.title}
+                      </h2>
+                      <p className="text-gray-600 mb-4 line-clamp-3">{featuredArticle.summary}</p>
+                      <div className="flex items-center gap-4">
+                        <span className="text-accent font-medium">Read Article →</span>
+                        <span className="text-sm text-gray-500">
+                          {featuredArticle.document_count} documents referenced
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            )}
+
+            {/* Article Grid */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {otherArticles.map((article) => (
+                <Link
+                  key={article.id}
+                  href={`/articles/${article.slug}`}
+                  className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                >
+                  <div className="relative h-48 bg-gray-100">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={article.image_url}
+                      alt={article.person_name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/images/placeholder.jpg';
+                      }}
+                    />
+                    <span className="absolute top-3 left-3 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                      {article.category}
+                    </span>
+                  </div>
+                  <div className="p-5">
+                    <h3 className="font-bold text-gray-900 mb-2 line-clamp-2">{article.title}</h3>
+                    <p className="text-gray-600 text-sm line-clamp-2">{article.summary}</p>
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="text-accent text-sm font-medium">Read →</span>
+                      <span className="text-xs text-gray-500">
+                        {article.document_count} docs
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
 
         {/* CTA */}
         <div className="mt-12 text-center">
@@ -234,10 +230,10 @@ export default function ArticlesPage() {
                 100 Notable Names
               </Link>
               <Link
-                href="/browse"
+                href="/creators"
                 className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
               >
-                Browse by Dataset
+                Content Creator Tool
               </Link>
             </div>
           </div>
@@ -245,7 +241,7 @@ export default function ArticlesPage() {
 
         {/* Disclaimer */}
         <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-          <strong>Disclaimer:</strong> All articles on this page are AI-generated summaries based on publicly
+          <strong>Disclaimer:</strong> All articles on this page are generated summaries based on publicly
           available DOJ documents. Appearance in these documents does not imply wrongdoing. Many individuals
           appear as witnesses, victims, or in incidental references. Content is provided for informational
           and research purposes only.
