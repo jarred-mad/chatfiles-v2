@@ -116,35 +116,21 @@ export default function CreatorsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-[#1a1a2e] text-white py-4">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="text-xl font-bold">
-              ChatFiles.org
-            </Link>
-            <nav className="flex items-center gap-6">
-              <Link href="/search" className="hover:text-blue-300">Search</Link>
-              <Link href="/people" className="hover:text-blue-300">People</Link>
-              <Link href="/creators" className="text-blue-300 font-semibold">Creators</Link>
-            </nav>
-          </div>
+      {/* Page Header */}
+      <div className="bg-navy text-white py-8">
+        <div className="max-w-6xl mx-auto px-4 text-center">
+          <h1 className="text-3xl font-bold mb-2">Content Creator Script Generator</h1>
+          <p className="text-gray-300">
+            Generate video scripts based on the Epstein Files documents. Select a person, choose your format, and get a ready-to-use script.
+          </p>
         </div>
-      </header>
+      </div>
 
       {/* Ad Banner */}
       <AdBanner className="py-4 bg-gray-100" />
 
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
-          {/* Page Title */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Content Creator Script Generator</h1>
-            <p className="text-gray-600">
-              Generate video scripts based on the Epstein Files documents. Select a person, choose your format, and get a ready-to-use script.
-            </p>
-          </div>
-
           {/* Main Content */}
           <div className="grid md:grid-cols-2 gap-8">
             {/* Left Column - Configuration */}
@@ -478,12 +464,6 @@ export default function CreatorsPage() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-100 py-6 mt-12">
-        <div className="container mx-auto px-4 text-center text-gray-600 text-sm">
-          <p>ChatFiles.org - Public Court Document Archive</p>
-        </div>
-      </footer>
     </div>
   );
 }
