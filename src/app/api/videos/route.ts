@@ -16,6 +16,7 @@ export async function GET(request: NextRequest) {
   const page = parseInt(searchParams.get('page') || '1', 10);
   const limit = Math.min(parseInt(searchParams.get('limit') || '24', 10), 100);
   const dataset = searchParams.get('dataset');
+  const search = searchParams.get('search');
 
   const offset = (page - 1) * limit;
 
@@ -28,6 +29,12 @@ export async function GET(request: NextRequest) {
     if (dataset) {
       conditions.push(`dataset_number = $${paramIndex}`);
       params.push(parseInt(dataset, 10));
+      paramIndex++;
+    }
+
+    if (search && search.trim()) {
+      conditions.push(`filename ILIKE $${paramIndex}`);
+      params.push(`%${search.trim()}%`);
       paramIndex++;
     }
 

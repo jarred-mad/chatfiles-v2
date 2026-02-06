@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { AdBanner } from '@/components/ui/AdSlot';
 
@@ -11,6 +11,11 @@ interface Video {
   file_size_bytes: number;
   dataset_number: number;
   thumbnail_url?: string;
+}
+
+interface DatasetCount {
+  number: number;
+  count: number;
 }
 
 const R2_PUBLIC_URL = 'https://pub-e8b8792b476a4216b2cbd491f9d61af0.r2.dev';
@@ -24,6 +29,7 @@ interface VideoResponse {
   total: number;
   page: number;
   totalPages: number;
+  datasets?: DatasetCount[];
 }
 
 function formatFileSize(bytes: number | null): string {
@@ -39,25 +45,76 @@ export default function VideosPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [datasets, setDatasets] = useState<DatasetCount[]>([]);
+  const [selectedDataset, setSelectedDataset] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [jumpToPage, setJumpToPage] = useState('');
 
-  useEffect(() => {
-    fetchVideos();
-  }, [page]);
-
-  const fetchVideos = async () => {
+  const fetchVideos = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/videos?page=${page}&limit=24`);
+      let url = `/api/videos?page=${page}&limit=24`;
+      if (selectedDataset !== null) {
+        url += `&dataset=${selectedDataset}`;
+      }
+      if (searchQuery.trim()) {
+        url += `&search=${encodeURIComponent(searchQuery.trim())}`;
+      }
+      const res = await fetch(url);
       const data: VideoResponse = await res.json();
       setVideos(data.videos || []);
       setTotalPages(data.totalPages || 1);
       setTotal(data.total || 0);
+      if (data.datasets && data.datasets.length > 0) {
+        setDatasets(data.datasets);
+      }
     } catch (err) {
       console.error('Failed to fetch videos:', err);
       setVideos([]);
     } finally {
       setLoading(false);
     }
+  }, [page, selectedDataset, searchQuery]);
+
+  useEffect(() => {
+    fetchVideos();
+  }, [fetchVideos]);
+
+  const handleDatasetFilter = (datasetNum: number | null) => {
+    setSelectedDataset(datasetNum);
+    setPage(1);
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPage(1);
+    fetchVideos();
+  };
+
+  const handleJumpToPage = (e: React.FormEvent) => {
+    e.preventDefault();
+    const pageNum = parseInt(jumpToPage, 10);
+    if (pageNum >= 1 && pageNum <= totalPages) {
+      setPage(pageNum);
+      setJumpToPage('');
+    }
+  };
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (page > 3) pages.push('...');
+      for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) {
+        pages.push(i);
+      }
+      if (page < totalPages - 2) pages.push('...');
+      pages.push(totalPages);
+    }
+    return pages;
   };
 
   return (
@@ -89,6 +146,63 @@ export default function VideosPage() {
               <strong>Processing in Progress:</strong> We are currently processing and uploading a large collection of videos from the Epstein files.
               Check back regularly as we slowly add more videos with thumbnails and previews.
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters and Search */}
+      <div className="bg-white border-b border-gray-200 py-4">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex flex-col md:flex-row md:items-center gap-4">
+            {/* Search */}
+            <form onSubmit={handleSearch} className="flex-1 max-w-md">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by filename..."
+                  className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
+                />
+                <button
+                  type="submit"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </button>
+              </div>
+            </form>
+
+            {/* Dataset Filters */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-gray-500">Dataset:</span>
+              <button
+                onClick={() => handleDatasetFilter(null)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  selectedDataset === null
+                    ? 'bg-navy text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                All
+              </button>
+              {datasets.map((ds) => (
+                <button
+                  key={ds.number}
+                  onClick={() => handleDatasetFilter(ds.number)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    selectedDataset === ds.number
+                      ? 'bg-navy text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {ds.number === 0 ? 'New' : `DS ${ds.number}`}
+                  <span className="ml-1 text-xs opacity-70">({ds.count})</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -173,24 +287,80 @@ export default function VideosPage() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-2 mt-8">
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="px-4 py-2 bg-white border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                >
-                  Previous
-                </button>
-                <span className="px-4 py-2 text-gray-600">
-                  Page {page} of {totalPages}
-                </span>
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="px-4 py-2 bg-white border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                >
-                  Next
-                </button>
+              <div className="flex flex-col items-center gap-4 mt-8">
+                {/* Page Numbers */}
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setPage(1)}
+                    disabled={page === 1}
+                    className="px-3 py-2 bg-white border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm"
+                    title="First page"
+                  >
+                    &laquo;
+                  </button>
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="px-3 py-2 bg-white border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm"
+                  >
+                    Prev
+                  </button>
+
+                  {getPageNumbers().map((p, idx) => (
+                    typeof p === 'number' ? (
+                      <button
+                        key={idx}
+                        onClick={() => setPage(p)}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          page === p
+                            ? 'bg-navy text-white'
+                            : 'bg-white border hover:bg-gray-50'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    ) : (
+                      <span key={idx} className="px-2 text-gray-400">...</span>
+                    )
+                  ))}
+
+                  <button
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="px-3 py-2 bg-white border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm"
+                  >
+                    Next
+                  </button>
+                  <button
+                    onClick={() => setPage(totalPages)}
+                    disabled={page === totalPages}
+                    className="px-3 py-2 bg-white border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm"
+                    title="Last page"
+                  >
+                    &raquo;
+                  </button>
+                </div>
+
+                {/* Jump to Page */}
+                <form onSubmit={handleJumpToPage} className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">Go to page:</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={totalPages}
+                    value={jumpToPage}
+                    onChange={(e) => setJumpToPage(e.target.value)}
+                    placeholder={String(page)}
+                    className="w-16 px-2 py-1 border rounded text-center text-sm"
+                  />
+                  <button
+                    type="submit"
+                    className="px-3 py-1 bg-navy text-white rounded text-sm hover:bg-navy-light"
+                  >
+                    Go
+                  </button>
+                  <span className="text-sm text-gray-400">of {totalPages}</span>
+                </form>
               </div>
             )}
           </>
