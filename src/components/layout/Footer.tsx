@@ -3,26 +3,6 @@ import Link from 'next/link';
 export default function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-400">
-      {/* LootFinder Ad */}
-      <div className="bg-[#0d1521] py-3 border-b border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 flex justify-center">
-          <a
-            href="https://www.LootFinder.xyz"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block hover:opacity-90 transition-opacity"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/images/lootfinder-ad.png"
-              alt="LootFinder.xyz - Discover Your Hidden Loot"
-              className="max-w-full h-auto rounded"
-              style={{ maxWidth: '280px' }}
-            />
-          </a>
-        </div>
-      </div>
-
       {/* Privacy Notice Banner */}
       <div className="bg-amber-900/30 border-b border-amber-800/50">
         <div className="max-w-7xl mx-auto px-4 py-4">
