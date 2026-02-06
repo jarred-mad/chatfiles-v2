@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import SearchBar from '../ui/SearchBar';
 
@@ -32,9 +33,16 @@ declare global {
 }
 
 export default function Header() {
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [currentLang, setCurrentLang] = useState('en');
+
+  // Check if a nav link is active
+  const isActive = (href: string) => {
+    if (href === '/') return pathname === '/';
+    return pathname.startsWith(href);
+  };
 
   // Initialize Google Translate
   useEffect(() => {
@@ -127,7 +135,9 @@ export default function Header() {
                 key={link.href}
                 href={link.href}
                 className={`transition-colors text-sm font-medium ${
-                  'highlight' in link && link.highlight
+                  isActive(link.href)
+                    ? 'text-white bg-white/20 px-3 py-1 rounded'
+                    : 'highlight' in link && link.highlight
                     ? 'text-yellow-400 hover:text-yellow-300'
                     : 'text-gray-300 hover:text-white'
                 }`}
@@ -233,7 +243,11 @@ export default function Header() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="text-gray-300 hover:text-white transition-colors py-2 px-2 rounded hover:bg-navy-light"
+                  className={`transition-colors py-2 px-2 rounded ${
+                    isActive(link.href)
+                      ? 'text-white bg-white/20 font-medium'
+                      : 'text-gray-300 hover:text-white hover:bg-navy-light'
+                  }`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   {link.label}
