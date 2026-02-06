@@ -188,7 +188,7 @@ export default function VideosPage() {
               >
                 All
               </button>
-              {datasets.map((ds) => (
+              {datasets.filter(ds => ds.number !== 0).map((ds) => (
                 <button
                   key={ds.number}
                   onClick={() => handleDatasetFilter(ds.number)}
@@ -198,7 +198,7 @@ export default function VideosPage() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {ds.number === 0 ? 'New' : `DS ${ds.number}`}
+                  DS {ds.number}
                   <span className="ml-1 text-xs opacity-70">({ds.count})</span>
                 </button>
               ))}
