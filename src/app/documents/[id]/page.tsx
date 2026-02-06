@@ -415,6 +415,16 @@ export default async function DocumentPage({ params }: PageProps) {
                   Twitter
                 </a>
                 <a
+                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(
+                    `https://chatfiles.org/documents/${doc.id}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-2 bg-[#1877F2] text-white text-sm text-center rounded hover:opacity-90"
+                >
+                  Facebook
+                </a>
+                <a
                   href={`https://www.reddit.com/submit?url=${encodeURIComponent(
                     `https://chatfiles.org/documents/${doc.id}`
                   )}&title=${encodeURIComponent(doc.filename)}`}
