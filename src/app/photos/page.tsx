@@ -352,11 +352,6 @@ function PhotosContent() {
                               </svg>
                             </div>
                           )}
-                          {photo.has_faces && (
-                            <span className="absolute top-2 right-2 bg-accent text-white text-xs px-2 py-0.5 rounded">
-                              {photo.face_count} face{photo.face_count !== 1 ? 's' : ''}
-                            </span>
-                          )}
                         </div>
                         <div className="p-3">
                           <p className="text-sm text-gray-900 truncate">{photo.document_name}</p>
