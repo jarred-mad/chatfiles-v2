@@ -6,10 +6,20 @@ import { useEffect, useRef, useState } from 'react';
 let adCounter = 0;
 const getAdId = () => `ad-${++adCounter}-${Date.now()}`;
 
-// Default AdSlot - returns null (no generic ads)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// Track ad impressions
+function trackImpression(network: string, format: string) {
+  if (typeof window !== 'undefined') {
+    fetch('/api/admin/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'ad_impression', network, format }),
+    }).catch(() => {});
+  }
+}
+
+// Default AdSlot - returns null
 export default function AdSlot({ className = '' }: { className?: string }) {
-  return null;
+  return <LeaderboardAd className={className} />;
 }
 
 // AdBanner - shows leaderboard on desktop, mobile banner on mobile
@@ -26,23 +36,22 @@ export function AdBanner({ className = '' }: { className?: string }) {
   );
 }
 
-// InContentAd - returns null until we have a code
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// InContentAd - for in-article/in-page ads
 export function InContentAd({ className = '' }: { className?: string }) {
-  return null;
+  return <BannerAd468 className={className} />;
 }
 
-// 728x90 Leaderboard display ad
+// 728x90 Leaderboard display ad (Adsterra)
 export function LeaderboardAd({ className = '' }: { className?: string }) {
   const adRef = useRef<HTMLDivElement>(null);
   const [adId] = useState(() => getAdId());
 
   useEffect(() => {
     if (!adRef.current || adRef.current.querySelector('script')) return;
+    trackImpression('adsterra', 'leaderboard');
 
     const container = adRef.current;
 
-    // Create script with unique options
     const script = document.createElement('script');
     script.type = 'text/javascript';
     script.innerHTML = `
@@ -63,18 +72,19 @@ export function LeaderboardAd({ className = '' }: { className?: string }) {
   }, [adId]);
 
   return (
-    <div ref={adRef} id={adId} className={`ad-container ${className}`} style={{ width: 728, minHeight: 90 }}>
+    <div ref={adRef} id={adId} className={`ad-container flex justify-center ${className}`} style={{ minHeight: 90 }}>
     </div>
   );
 }
 
-// 300x250 Sidebar display ad
+// 300x250 Sidebar display ad (Adsterra)
 export function SidebarAd({ className = '' }: { className?: string }) {
   const adRef = useRef<HTMLDivElement>(null);
   const [adId] = useState(() => getAdId());
 
   useEffect(() => {
     if (!adRef.current || adRef.current.querySelector('script')) return;
+    trackImpression('adsterra', 'sidebar');
 
     const container = adRef.current;
 
@@ -103,13 +113,14 @@ export function SidebarAd({ className = '' }: { className?: string }) {
   );
 }
 
-// 160x300 Skyscraper display ad
+// 160x300 Skyscraper display ad (Adsterra)
 export function SkyscraperAd({ className = '' }: { className?: string }) {
   const adRef = useRef<HTMLDivElement>(null);
   const [adId] = useState(() => getAdId());
 
   useEffect(() => {
     if (!adRef.current || adRef.current.querySelector('script')) return;
+    trackImpression('adsterra', 'skyscraper');
 
     const container = adRef.current;
 
@@ -138,13 +149,14 @@ export function SkyscraperAd({ className = '' }: { className?: string }) {
   );
 }
 
-// 468x60 Banner ad
+// 468x60 Banner ad (Adsterra)
 export function BannerAd468({ className = '' }: { className?: string }) {
   const adRef = useRef<HTMLDivElement>(null);
   const [adId] = useState(() => getAdId());
 
   useEffect(() => {
     if (!adRef.current || adRef.current.querySelector('script')) return;
+    trackImpression('adsterra', 'banner468');
 
     const container = adRef.current;
 
@@ -168,18 +180,19 @@ export function BannerAd468({ className = '' }: { className?: string }) {
   }, [adId]);
 
   return (
-    <div ref={adRef} id={adId} className={`ad-container ${className}`} style={{ width: 468, minHeight: 60 }}>
+    <div ref={adRef} id={adId} className={`ad-container flex justify-center my-4 ${className}`} style={{ minHeight: 60 }}>
     </div>
   );
 }
 
-// 160x600 Wide Skyscraper display ad
+// 160x600 Wide Skyscraper display ad (Adsterra)
 export function WideSkyscraperAd({ className = '' }: { className?: string }) {
   const adRef = useRef<HTMLDivElement>(null);
   const [adId] = useState(() => getAdId());
 
   useEffect(() => {
     if (!adRef.current || adRef.current.querySelector('script')) return;
+    trackImpression('adsterra', 'wide_skyscraper');
 
     const container = adRef.current;
 
@@ -208,13 +221,14 @@ export function WideSkyscraperAd({ className = '' }: { className?: string }) {
   );
 }
 
-// 320x50 Mobile banner ad
+// 320x50 Mobile banner ad (Adsterra)
 export function MobileBannerAd({ className = '' }: { className?: string }) {
   const adRef = useRef<HTMLDivElement>(null);
   const [adId] = useState(() => getAdId());
 
   useEffect(() => {
     if (!adRef.current || adRef.current.querySelector('script')) return;
+    trackImpression('adsterra', 'mobile_banner');
 
     const container = adRef.current;
 
@@ -238,7 +252,7 @@ export function MobileBannerAd({ className = '' }: { className?: string }) {
   }, [adId]);
 
   return (
-    <div ref={adRef} id={adId} className={`ad-container ${className}`} style={{ width: 320, minHeight: 50 }}>
+    <div ref={adRef} id={adId} className={`ad-container flex justify-center ${className}`} style={{ minHeight: 50 }}>
     </div>
   );
 }

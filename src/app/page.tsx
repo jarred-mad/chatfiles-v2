@@ -1,17 +1,49 @@
 import Link from "next/link";
 import SearchBar from "@/components/ui/SearchBar";
-import AdSlot, { AdBanner } from "@/components/ui/AdSlot";
 import { query } from "@/lib/database";
+import { AdBanner, InContentAd } from "@/components/ui/AdSlot";
+import RecentlySearched from "@/components/ui/RecentlySearched";
 
-// Example search chips - these are static suggestions
-const exampleSearches = [
-  "Jeffrey Epstein",
-  "Ghislaine Maxwell",
-  "Flight Logs",
-  "FBI Report",
-  "Deposition",
-  "Interview",
+// 100 Notable individuals from the DOJ Epstein Files
+const allNotableNames = [
+  "Donald Trump", "Bill Clinton", "Al Gore", "Bill Richardson", "George Mitchell",
+  "Alexander Acosta", "Stacey Plaskett", "Peter Mandelson", "Keir Starmer", "Ehud Barak",
+  "Narendra Modi", "Tony Blair", "John Kerry", "Andrew Cuomo", "Robert F. Kennedy Jr.",
+  "Prince Andrew", "Sarah Ferguson", "Mette-Marit", "Elon Musk", "Bill Gates",
+  "Jeff Bezos", "Sergey Brin", "Eric Schmidt", "Reid Hoffman", "Peter Thiel",
+  "Mark Zuckerberg", "Larry Page", "Howard Lutnick", "Leslie Wexner", "Leon Black",
+  "Steve Tisch", "Casey Wasserman", "Jes Staley", "Mortimer Zuckerman", "Tom Barrack",
+  "Glenn Dubin", "Ronald Perelman", "Tom Pritzker", "Rupert Murdoch", "David Koch",
+  "Lewis Ranieri", "Kevin Spacey", "Chris Tucker", "Woody Allen", "Mick Jagger",
+  "Michael Jackson", "Diana Ross", "Jay-Z", "Harvey Weinstein", "Pusha T",
+  "Brett Ratner", "Phil Collins", "Minnie Driver", "Naomi Campbell", "David Copperfield",
+  "Walter Cronkite", "Lady Gaga", "Timothée Chalamet", "Alec Baldwin", "Katie Couric",
+  "Peggy Siegal", "David Brooks", "Dr. Mehmet Oz", "Noam Chomsky", "Larry Summers",
+  "Stephen Hawking", "Marvin Minsky", "Lawrence Krauss", "Stephen Kosslyn", "Joi Ito",
+  "Boris Nikolic", "Alan Dershowitz", "Kenneth Starr", "Alex Spiro", "Kathryn Ruemmler",
+  "Miroslav Lajčák", "Joanna Rubinstein", "Kevin Rudd", "Mohammed bin Salman", "Deepak Chopra",
+  "Elie Wiesel", "Richard Branson", "Steve Bannon", "Mira Nair", "George Stephanopoulos",
+  "Carole Radziwill", "Whitney Sudler-Smith", "Michael Bloomberg", "Eva Andersson-Dubin",
+  "Jean-Luc Brunel", "Ghislaine Maxwell", "Caroline Stanbury", "Merrie Spaeth",
+  "Larry Visoski", "Nadia Marcinkova", "Sarah Kellen", "Lesley Groff", "Peter Listerman",
+  "Karyna Shuliak", "Mark Epstein",
 ];
+
+// Shuffle array using seeded random based on current hour (changes hourly)
+function shuffleWithSeed(array: string[], seed: number): string[] {
+  const shuffled = [...array];
+  let currentIndex = shuffled.length;
+  let seededRandom = seed;
+
+  while (currentIndex > 0) {
+    seededRandom = (seededRandom * 9301 + 49297) % 233280;
+    const randomIndex = Math.floor((seededRandom / 233280) * currentIndex);
+    currentIndex--;
+    [shuffled[currentIndex], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[currentIndex]];
+  }
+
+  return shuffled;
+}
 
 async function getStats() {
   try {
@@ -31,7 +63,7 @@ async function getStats() {
          FROM mentioned_names
          GROUP BY name
          ORDER BY total DESC
-         LIMIT 6`
+         LIMIT 20`
       ),
     ]);
 
@@ -58,20 +90,23 @@ async function getStats() {
   }
 }
 
-async function getRecentDocuments() {
+async function getRecentArticles() {
   try {
-    const docs = await query<{
-      id: string;
-      filename: string;
-      dataset_number: number;
-      document_type: string;
+    const articles = await query<{
+      slug: string;
+      person_name: string;
+      title: string;
+      summary: string;
+      category: string;
+      image_url: string;
     }>(
-      `SELECT id, filename, dataset_number, document_type
-       FROM documents
-       ORDER BY created_at DESC
+      `SELECT slug, person_name, title, summary, category, image_url
+       FROM articles
+       WHERE published_at IS NOT NULL
+       ORDER BY updated_at DESC
        LIMIT 8`
     );
-    return docs;
+    return articles;
   } catch {
     return [];
   }
@@ -85,7 +120,7 @@ function formatNumber(num: number): string {
 
 export default async function Home() {
   const stats = await getStats();
-  const recentDocs = await getRecentDocuments();
+  const recentArticles = await getRecentArticles();
 
   // Build collections from real data
   const collections = [
@@ -133,9 +168,9 @@ export default async function Home() {
             />
           </div>
 
-          {/* Example Searches */}
+          {/* Quick Search Chips */}
           <div className="flex flex-wrap justify-center gap-2">
-            {(stats.topNames.length > 0 ? stats.topNames.map(n => n.name) : exampleSearches).map((term) => (
+            {["Flight Logs", "FBI Report", "Deposition", "Interview", "Email", "Court Filing"].map((term) => (
               <Link
                 key={term}
                 href={`/search?q=${encodeURIComponent(term)}`}
@@ -148,8 +183,55 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Top Banner Ad */}
-      <AdBanner id="home-top" className="bg-white border-b" />
+      {/* Processing Notice */}
+      <section className="bg-gradient-to-r from-amber-500 to-orange-500 py-4">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex items-center justify-center gap-3 text-white text-center">
+            <svg className="w-6 h-6 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span className="font-medium">
+              Bear with us as our software has millions of files to analyze. Our facial recognition software is analyzing all the photos so you can search for photos of people involved.
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* Names in the Files Section */}
+      <section className="bg-navy-light py-8">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-white">
+              Names in the Files
+            </h2>
+            <Link href="/people" className="text-accent hover:text-accent-hover text-sm font-medium">
+              View All 100 &rarr;
+            </Link>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {shuffleWithSeed(allNotableNames, Math.floor(Date.now() / 3600000)).slice(0, 30).map((name) => (
+              <Link
+                key={name}
+                href={`/search?q=${encodeURIComponent(name)}`}
+                className="px-3 py-2 bg-white/5 hover:bg-accent text-white text-sm rounded-lg transition-colors border border-white/10 hover:border-accent"
+              >
+                {name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Recently Searched */}
+      <section className="py-8 bg-white border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-4">
+          <RecentlySearched />
+        </div>
+      </section>
+
+      {/* Ad Banner */}
+      <AdBanner className="bg-gray-100 py-4" />
 
       {/* Stats Bar */}
       <section className="bg-white border-b border-gray-200 py-6">
@@ -228,9 +310,11 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Ad slot between sections */}
-      <div className="flex justify-center py-6 bg-white">
-        <AdSlot size="incontent" id="home-middle" />
+      {/* In-Content Ad */}
+      <div className="bg-gray-50 py-4">
+        <div className="max-w-6xl mx-auto px-4">
+          <InContentAd />
+        </div>
       </div>
 
       {/* How It Works */}
@@ -274,28 +358,38 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Recent Documents */}
-      {recentDocs.length > 0 && (
+      {/* Recent Articles */}
+      {recentArticles.length > 0 && (
         <section className="py-12 bg-gray-50">
           <div className="max-w-6xl mx-auto px-4">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900">
-                Recent Documents
+                Recent Articles
               </h2>
               <Link
-                href="/browse"
+                href="/articles"
                 className="text-accent hover:text-accent-hover font-medium text-sm"
               >
                 View All &rarr;
               </Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {recentDocs.map((doc) => (
-                <Link key={doc.id} href={`/documents/${doc.id}`} className="card card-hover p-4">
-                  <h3 className="font-medium text-gray-900 truncate text-sm">{doc.filename}</h3>
-                  <p className="text-xs text-gray-500 mt-1">Dataset {doc.dataset_number}</p>
-                  <div className="flex gap-2 mt-2">
-                    <span className="badge badge-other text-xs">{doc.document_type || 'document'}</span>
+              {recentArticles.map((article) => (
+                <Link key={article.slug} href={`/articles/${article.slug}`} className="card card-hover overflow-hidden">
+                  <div className="h-32 bg-gray-100 relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={article.image_url || '/images/placeholder.jpg'}
+                      alt={article.person_name}
+                      className="w-full h-full object-cover"
+                    />
+                    <span className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                      {article.category}
+                    </span>
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-medium text-gray-900 text-sm line-clamp-2">{article.title}</h3>
+                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">{article.summary}</p>
                   </div>
                 </Link>
               ))}
@@ -303,9 +397,6 @@ export default async function Home() {
           </div>
         </section>
       )}
-
-      {/* Bottom Banner Ad */}
-      <AdBanner id="home-bottom" className="bg-gray-50" />
 
       {/* CTA Section */}
       <section className="py-12 bg-navy text-white">

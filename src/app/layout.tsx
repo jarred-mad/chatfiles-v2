@@ -63,6 +63,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Ezoic Domain Verification */}
+        <meta name="ezoic-site-verification" content="olOYBUxF2oaAMyaqirvPbrhPZYTX99" />
+
         {/* Google Analytics */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-GFZS9CDFWN"
@@ -84,11 +87,6 @@ export default function RootLayout({
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
-        {/* Bottom Social Bar Ad */}
-        <Script
-          src="https://pl28650027.effectivegatecpm.com/11/bd/29/11bd29569e9a68dcd33307036a87daff.js"
-          strategy="lazyOnload"
-        />
       </body>
     </html>
   );
