@@ -230,6 +230,19 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Language Notice */}
+      <section className="bg-blue-600 py-3">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex items-center justify-center gap-2 text-white text-center text-sm">
+            <span className="text-lg">🌐</span>
+            <span>
+              Available in multiple languages! Click the language selector in the navigation bar to switch between
+              <strong> English, Arabic, German, Spanish, French,</strong> and <strong>Chinese</strong>.
+            </span>
+          </div>
+        </div>
+      </section>
+
       {/* Names in the Files Section */}
       <section className="bg-navy-light py-8">
         <div className="max-w-6xl mx-auto px-4">
