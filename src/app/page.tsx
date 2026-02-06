@@ -3,7 +3,7 @@
 import Link from "next/link";
 import SearchBar from "@/components/ui/SearchBar";
 import { query } from "@/lib/database";
-import { AdBanner, InContentAd } from "@/components/ui/AdSlot";
+import { AdBanner, InContentAd, HilltopAdBanner1, HilltopAdBanner2, HilltopAdBanner3 } from "@/components/ui/AdSlot";
 import RecentlySearched from "@/components/ui/RecentlySearched";
 
 // 100 Notable individuals from the DOJ Epstein Files
@@ -235,6 +235,14 @@ export default async function Home() {
       {/* Ad Banner */}
       <AdBanner className="bg-gray-100 py-4" />
 
+      {/* HilltopAds */}
+      <div className="bg-gray-50 py-4">
+        <div className="max-w-6xl mx-auto px-4 flex flex-wrap justify-center gap-4">
+          <HilltopAdBanner1 />
+          <HilltopAdBanner2 />
+        </div>
+      </div>
+
       {/* Stats Bar */}
       <section className="bg-white border-b border-gray-200 py-6">
         <div className="max-w-6xl mx-auto px-4">
@@ -314,8 +322,9 @@ export default async function Home() {
 
       {/* In-Content Ad */}
       <div className="bg-gray-50 py-4">
-        <div className="max-w-6xl mx-auto px-4">
+        <div className="max-w-6xl mx-auto px-4 flex flex-col items-center gap-4">
           <InContentAd />
+          <HilltopAdBanner3 />
         </div>
       </div>
 

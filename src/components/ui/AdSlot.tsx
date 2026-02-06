@@ -256,3 +256,141 @@ export function MobileBannerAd({ className = '' }: { className?: string }) {
     </div>
   );
 }
+
+// HilltopAds Banner 1
+export function HilltopAdBanner1({ className = '' }: { className?: string }) {
+  const adRef = useRef<HTMLDivElement>(null);
+  const [adId] = useState(() => getAdId());
+
+  useEffect(() => {
+    if (!adRef.current || adRef.current.querySelector('script')) return;
+    trackImpression('hilltopads', 'banner1');
+
+    const container = adRef.current;
+    const script = document.createElement('script');
+    script.async = true;
+    script.referrerPolicy = 'no-referrer-when-downgrade';
+    script.src = '//lucky-throat.com/bYXxV/s.dpGClY0BYiWVcQ/beZm-9RuiZDU/lGkjPaTMYO3qNuzsYw5IMVjJkBtANKj/cz3zNijIkezBM/wN';
+    container.appendChild(script);
+  }, [adId]);
+
+  return (
+    <div ref={adRef} id={adId} className={`ad-container flex justify-center ${className}`}>
+    </div>
+  );
+}
+
+// HilltopAds Banner 2
+export function HilltopAdBanner2({ className = '' }: { className?: string }) {
+  const adRef = useRef<HTMLDivElement>(null);
+  const [adId] = useState(() => getAdId());
+
+  useEffect(() => {
+    if (!adRef.current || adRef.current.querySelector('script')) return;
+    trackImpression('hilltopads', 'banner2');
+
+    const container = adRef.current;
+    const script = document.createElement('script');
+    script.async = true;
+    script.referrerPolicy = 'no-referrer-when-downgrade';
+    script.src = '//lucky-throat.com/bXXYV_sod.GClv0mYeWhcB/seImA9huHZ/U/lEk/P/TbYw3vNJzTYN5INnDvUEtcN/jZcj3lNwjukl0UOCQy';
+    container.appendChild(script);
+  }, [adId]);
+
+  return (
+    <div ref={adRef} id={adId} className={`ad-container flex justify-center ${className}`}>
+    </div>
+  );
+}
+
+// HilltopAds Banner 3
+export function HilltopAdBanner3({ className = '' }: { className?: string }) {
+  const adRef = useRef<HTMLDivElement>(null);
+  const [adId] = useState(() => getAdId());
+
+  useEffect(() => {
+    if (!adRef.current || adRef.current.querySelector('script')) return;
+    trackImpression('hilltopads', 'banner3');
+
+    const container = adRef.current;
+    const script = document.createElement('script');
+    script.async = true;
+    script.referrerPolicy = 'no-referrer-when-downgrade';
+    script.src = '//lucky-throat.com/bMXFV.smdkGklj0/YLW-cy/be/mh9Lu/ZUUvlxkQPYTkY/3UNjz-EaylMBjUE/thNEjOcQ3UM-TnImyqNCQj';
+    container.appendChild(script);
+  }, [adId]);
+
+  return (
+    <div ref={adRef} id={adId} className={`ad-container flex justify-center ${className}`}>
+    </div>
+  );
+}
+
+// HilltopAds Banner 4
+export function HilltopAdBanner4({ className = '' }: { className?: string }) {
+  const adRef = useRef<HTMLDivElement>(null);
+  const [adId] = useState(() => getAdId());
+
+  useEffect(() => {
+    if (!adRef.current || adRef.current.querySelector('script')) return;
+    trackImpression('hilltopads', 'banner4');
+
+    const container = adRef.current;
+    const script = document.createElement('script');
+    script.async = true;
+    script.referrerPolicy = 'no-referrer-when-downgrade';
+    script.src = '//lucky-throat.com/beXYV.s/dlG-lk0LYpW/ch/AemmL9wuSZtUdl/kwPYT/Yc3rNJzRYZ5cN/D/UstCNDjbcd3oN/jhkD0MOyQd';
+    container.appendChild(script);
+  }, [adId]);
+
+  return (
+    <div ref={adRef} id={adId} className={`ad-container flex justify-center ${className}`}>
+    </div>
+  );
+}
+
+// HilltopAds Banner 5
+export function HilltopAdBanner5({ className = '' }: { className?: string }) {
+  const adRef = useRef<HTMLDivElement>(null);
+  const [adId] = useState(() => getAdId());
+
+  useEffect(() => {
+    if (!adRef.current || adRef.current.querySelector('script')) return;
+    trackImpression('hilltopads', 'banner5');
+
+    const container = adRef.current;
+    const script = document.createElement('script');
+    script.async = true;
+    script.referrerPolicy = 'no-referrer-when-downgrade';
+    script.src = '//lucky-throat.com/bgX.VNs/dVGNlN0vYWWfcc/oe_mh9OutZ/UklJkxPOTPYq3GNuzJYl5bMajJk_tXNLjBcA3_NwjNk/zOMTwH';
+    container.appendChild(script);
+  }, [adId]);
+
+  return (
+    <div ref={adRef} id={adId} className={`ad-container flex justify-center ${className}`}>
+    </div>
+  );
+}
+
+// HilltopAds Banner 6
+export function HilltopAdBanner6({ className = '' }: { className?: string }) {
+  const adRef = useRef<HTMLDivElement>(null);
+  const [adId] = useState(() => getAdId());
+
+  useEffect(() => {
+    if (!adRef.current || adRef.current.querySelector('script')) return;
+    trackImpression('hilltopads', 'banner6');
+
+    const container = adRef.current;
+    const script = document.createElement('script');
+    script.async = true;
+    script.referrerPolicy = 'no-referrer-when-downgrade';
+    script.src = '//lucky-throat.com/bfXaVRsxd.Gvl/0DYPWQcP/Tesm/9MuAZYUKlOkIPFT/YB3/NLzlEryQM_j/ETtBNgjIcT3vMWTsIjyoNQQE';
+    container.appendChild(script);
+  }, [adId]);
+
+  return (
+    <div ref={adRef} id={adId} className={`ad-container flex justify-center ${className}`}>
+    </div>
+  );
+}
