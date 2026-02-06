@@ -10,6 +10,13 @@ interface Video {
   file_path: string | null;
   file_size_bytes: number;
   dataset_number: number;
+  thumbnail_url?: string;
+}
+
+const R2_PUBLIC_URL = 'https://pub-e8b8792b476a4216b2cbd491f9d61af0.r2.dev';
+
+function getThumbnailUrl(videoId: string): string {
+  return `${R2_PUBLIC_URL}/thumbnails/${videoId}.jpg`;
 }
 
 interface VideoResponse {
@@ -68,6 +75,24 @@ export default function VideosPage() {
       {/* Ad Banner */}
       <AdBanner className="py-4 bg-gray-100" />
 
+      {/* Processing Notice */}
+      <div className="bg-blue-50 border-b border-blue-200">
+        <div className="max-w-6xl mx-auto px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0">
+              <svg className="w-5 h-5 text-blue-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </div>
+            <p className="text-sm text-blue-700">
+              <strong>Processing in Progress:</strong> We are currently processing and uploading a large collection of videos from the Epstein files.
+              Check back regularly as we slowly add more videos with thumbnails and previews.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Content */}
       <div className="max-w-6xl mx-auto px-4 py-8">
         {loading ? (
@@ -101,11 +126,24 @@ export default function VideosPage() {
                   className="bg-white rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow group"
                 >
                   {/* Thumbnail */}
-                  <div className="aspect-video bg-gray-900 relative flex items-center justify-center">
-                    <svg className="w-16 h-16 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                  <div className="aspect-video bg-gray-900 relative overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={getThumbnailUrl(video.id)}
+                      alt={video.filename}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Hide broken image and show placeholder
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                    {/* Fallback icon (shown when image fails) */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <svg className="w-16 h-16 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
                     {/* Play overlay */}
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
