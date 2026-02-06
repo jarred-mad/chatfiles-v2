@@ -244,26 +244,15 @@ export function MobileBannerAd({ className = '' }: { className?: string }) {
 }
 
 // Placeholder components for removed HilltopAds (return null to avoid breaking imports)
-export function HilltopAdBanner1({ className = '' }: { className?: string }) {
-  return null;
-}
-
-export function HilltopAdBanner2({ className = '' }: { className?: string }) {
-  return null;
-}
-
-export function HilltopAdBanner3({ className = '' }: { className?: string }) {
-  return null;
-}
-
-export function HilltopAdBanner4({ className = '' }: { className?: string }) {
-  return null;
-}
-
-export function HilltopAdBanner5({ className = '' }: { className?: string }) {
-  return null;
-}
-
-export function HilltopAdBanner6({ className = '' }: { className?: string }) {
-  return null;
-}
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function HilltopAdBanner1({ className = '' }: { className?: string }) { return null; }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function HilltopAdBanner2({ className = '' }: { className?: string }) { return null; }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function HilltopAdBanner3({ className = '' }: { className?: string }) { return null; }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function HilltopAdBanner4({ className = '' }: { className?: string }) { return null; }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function HilltopAdBanner5({ className = '' }: { className?: string }) { return null; }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function HilltopAdBanner6({ className = '' }: { className?: string }) { return null; }
