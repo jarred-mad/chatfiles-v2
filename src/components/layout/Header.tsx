@@ -123,9 +123,9 @@ export default function Header() {
             <Image
               src="/images/logo.png"
               alt="ChatFiles.org"
-              width={140}
-              height={40}
-              className="h-10 w-auto"
+              width={151}
+              height={118}
+              className="h-12 w-auto"
               priority
             />
           </Link>
