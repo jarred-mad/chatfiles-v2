@@ -28,9 +28,9 @@ interface ImageRow {
   scene_type: string | null;
 }
 
-// Map frontend filter IDs to database scene_type values
-// Note: 'people' filter uses has_faces=true, not scene_type
+// Map frontend filter IDs to database scene_type/document_type_class values
 const SCENE_TYPE_MAP: Record<string, string[]> = {
+  people: ['a photograph of people'],
   mansion: ['a mansion or estate', 'a house or residential building'],
   yacht: ['a yacht or boat'],
   airplane: ['an airplane interior'],
@@ -42,6 +42,16 @@ const SCENE_TYPE_MAP: Record<string, string[]> = {
   pool: ['a pool or swimming area'],
   dining: ['a restaurant or dining area'],
 };
+
+// Document types that should be excluded from "All Photos" view (unless explicitly filtered)
+const DOCUMENT_TYPES = [
+  'a scanned document or letter',
+  'a handwritten note',
+  'a legal document',
+  'a fax or printed communication',
+  'a receipt or invoice',
+  'a calendar or schedule',
+];
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -83,8 +93,12 @@ export async function GET(request: NextRequest) {
     // Scene type filter
     if (scene && scene !== 'all') {
       if (scene === 'people') {
-        // "People" filter uses has_faces = true for images with detected faces
-        conditions.push(`ei.has_faces = true`);
+        // "People" filter: images classified as photographs of people OR with actual detected faces
+        conditions.push(`(
+          ei.document_type_class = 'a photograph of people'
+          OR ei.scene_type = 'a photograph of people'
+          OR EXISTS (SELECT 1 FROM faces f WHERE f.image_id = ei.id)
+        )`);
       } else if (SCENE_TYPE_MAP[scene]) {
         const sceneTypes = SCENE_TYPE_MAP[scene];
         const placeholders = sceneTypes.map((_, i) => `$${paramIndex + i}`).join(', ');
@@ -92,6 +106,15 @@ export async function GET(request: NextRequest) {
         params.push(...sceneTypes);
         paramIndex += sceneTypes.length;
       }
+    } else if (!scene || scene === 'all') {
+      // For "All Photos", exclude scanned documents to show actual photos first
+      const docPlaceholders = DOCUMENT_TYPES.map((_, i) => `$${paramIndex + i}`).join(', ');
+      conditions.push(`(
+        ei.document_type_class IS NULL
+        OR ei.document_type_class NOT IN (${docPlaceholders})
+      )`);
+      params.push(...DOCUMENT_TYPES);
+      paramIndex += DOCUMENT_TYPES.length;
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -107,7 +130,7 @@ export async function GET(request: NextRequest) {
     const total = parseInt(countResult[0]?.total || '0', 10);
 
     // Get images with document info
-    // Prioritize images that have valid R2 paths (not null)
+    // Prioritize: 1) images with actual faces, 2) photos of people, 3) classified photos, 4) others
     const imagesQuery = `
       SELECT
         ei.id,
@@ -124,7 +147,11 @@ export async function GET(request: NextRequest) {
       FROM extracted_images ei
       JOIN documents d ON ei.document_id = d.id
       ${whereClause}
-      ORDER BY (ei.file_path_r2 IS NOT NULL) DESC, ei.created_at DESC
+      ORDER BY
+        (SELECT COUNT(*) FROM faces f WHERE f.image_id = ei.id) DESC,
+        (ei.document_type_class = 'a photograph of people') DESC,
+        (ei.scene_type IS NOT NULL) DESC,
+        ei.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
 
