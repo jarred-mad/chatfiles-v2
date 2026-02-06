@@ -1,3 +1,4 @@
+// Deploy trigger: 2026-02-05-v2
 // Build trigger: 2026-02-05-v1
 import Link from "next/link";
 import SearchBar from "@/components/ui/SearchBar";
