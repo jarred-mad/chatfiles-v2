@@ -2,7 +2,6 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { query } from '@/lib/database';
-import { AdBanner } from '@/components/ui/AdSlot';
 
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic';
@@ -107,7 +106,6 @@ export default async function VideoPage({ params }: PageProps) {
       </div>
 
       {/* Ad Banner */}
-      <AdBanner className="py-4 bg-gray-800" />
 
       {/* Video Info */}
       <div className="max-w-6xl mx-auto px-4 py-8">

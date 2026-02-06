@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { AdBanner } from '@/components/ui/AdSlot';
 
 interface Article {
   id: number;
@@ -100,7 +99,6 @@ export default function ArticlesPage() {
       </div>
 
       {/* Ad Banner */}
-      <AdBanner className="py-4 bg-gray-100" />
 
       <div className="max-w-6xl mx-auto px-4 py-10">
         {/* Category Filter */}

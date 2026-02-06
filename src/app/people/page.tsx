@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { notableNames, categories } from "@/lib/notable-names";
-import { AdBanner, InContentAd } from "@/components/ui/AdSlot";
 
 const R2_URL = "https://pub-e8b8792b476a4216b2cbd491f9d61af0.r2.dev";
 
@@ -74,7 +73,6 @@ export default function PeoplePage() {
 
       {/* Top Ad Banner */}
       <div className="max-w-6xl mx-auto px-4 pt-6">
-        <AdBanner />
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-8">
@@ -115,7 +113,6 @@ export default function PeoplePage() {
           <>
             {/* Show ad after every 3 categories */}
             {catIndex > 0 && catIndex % 3 === 0 && (
-              <InContentAd key={`ad-${catIndex}`} className="mb-8" />
             )}
           <section key={cat.id} className="mb-12">
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">

@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { notableNames, getPersonBySlug, getCategoryInfo } from '@/lib/notable-names';
 import { query } from '@/lib/database';
-import { AdBanner } from '@/components/ui/AdSlot';
 
 const R2_URL = "https://pub-e8b8792b476a4216b2cbd491f9d61af0.r2.dev";
 
@@ -339,7 +338,6 @@ export default async function PersonProfilePage({ params }: PageProps) {
       </section>
 
       {/* Ad Banner */}
-      <AdBanner className="py-4 bg-gray-100" />
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Extended Profile */}

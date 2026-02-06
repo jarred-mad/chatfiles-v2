@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { AdBanner } from '@/components/ui/AdSlot';
 
 interface Video {
   id: string;
@@ -130,7 +129,6 @@ export default function VideosPage() {
       </div>
 
       {/* Ad Banner */}
-      <AdBanner className="py-4 bg-gray-100" />
 
       {/* Processing Notice */}
       <div className="bg-blue-50 border-b border-blue-200">

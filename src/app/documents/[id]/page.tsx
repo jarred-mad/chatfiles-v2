@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import AdSlot from '@/components/ui/AdSlot';
 import PDFViewer from '@/components/ui/PDFViewer';
 import { query } from '@/lib/database';
 
@@ -438,7 +437,6 @@ export default async function DocumentPage({ params }: PageProps) {
             </div>
 
             {/* Ad slot */}
-            <AdSlot size="sidebar" id="document-sidebar" />
           </aside>
         </div>
       </div>

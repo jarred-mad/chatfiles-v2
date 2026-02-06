@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import AdSlot, { AdBanner } from '@/components/ui/AdSlot';
 import { query } from '@/lib/database';
 import { notableNames } from '@/lib/notable-names';
 
@@ -66,7 +65,6 @@ export default async function BrowsePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Ad Banner */}
-      <AdBanner id="browse-top" className="bg-white border-b" />
 
       {/* Header */}
       <div className="bg-white border-b border-gray-200 py-6">
@@ -109,7 +107,6 @@ export default async function BrowsePage() {
 
         {/* Ad slot */}
         <div className="flex justify-center">
-          <AdSlot size="incontent" id="browse-middle" />
         </div>
 
         {/* Browse by Type */}

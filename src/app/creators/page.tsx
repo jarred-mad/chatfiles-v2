@@ -4,7 +4,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { notableNames, NotablePerson } from '@/lib/notable-names';
-import { AdBanner } from '@/components/ui/AdSlot';
 
 interface ScriptResult {
   script: string;
@@ -128,7 +127,6 @@ export default function CreatorsPage() {
       </div>
 
       {/* Ad Banner */}
-      <AdBanner className="py-4 bg-gray-100" />
 
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">

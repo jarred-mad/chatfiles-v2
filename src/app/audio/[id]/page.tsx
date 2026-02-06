@@ -4,7 +4,6 @@ import { notFound } from 'next/navigation';
 import { promises as fs } from 'fs';
 import path from 'path';
 import CommentSection from '@/components/ui/CommentSection';
-import { AdBanner } from '@/components/ui/AdSlot';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -219,7 +218,6 @@ export default async function TranscriptPage({ params }: PageProps) {
       </div>
 
       {/* Ad Banner */}
-      <AdBanner className="py-4 bg-gray-100" />
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Meta Info */}

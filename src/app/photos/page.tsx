@@ -4,7 +4,6 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import AdSlot, { AdBanner } from '@/components/ui/AdSlot';
 
 interface Photo {
   id: string;
@@ -176,7 +175,6 @@ function PhotosContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Ad Banner */}
-      <AdBanner id="photos-top" className="bg-white border-b" />
 
       {/* Header */}
       <div className="bg-white border-b border-gray-200 py-6">
@@ -370,7 +368,6 @@ function PhotosContent() {
 
                       {(index + 1) % 8 === 0 && (
                         <div className="col-span-2 md:col-span-3 lg:col-span-4 my-4 flex justify-center">
-                          <AdSlot size="incontent" id={`photos-inline-${index}`} />
                         </div>
                       )}
                     </div>

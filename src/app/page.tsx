@@ -3,7 +3,6 @@
 import Link from "next/link";
 import SearchBar from "@/components/ui/SearchBar";
 import { query } from "@/lib/database";
-import { AdBanner } from "@/components/ui/AdSlot";
 import RecentlySearched from "@/components/ui/RecentlySearched";
 
 // 100 Notable individuals from the DOJ Epstein Files
@@ -377,7 +376,6 @@ export default async function Home() {
       </section>
 
       {/* Ad Banner */}
-      <AdBanner className="bg-gray-100 py-4" />
 
       {/* Stats Bar */}
       <section className="bg-white border-b border-gray-200 py-6">

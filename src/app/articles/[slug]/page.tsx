@@ -2,7 +2,6 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { query } from '@/lib/database';
-import { AdBanner, WideSkyscraperAd } from '@/components/ui/AdSlot';
 
 // Force dynamic rendering - fetch from database on each request
 export const dynamic = 'force-dynamic';
@@ -102,7 +101,6 @@ export default async function ArticlePage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Ad Banner */}
-      <AdBanner className="py-4 bg-gray-100" />
 
       {/* Main Layout with Sidebar */}
       <div className="max-w-7xl mx-auto px-4 py-6">

@@ -1,6 +1,5 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { AdBanner } from '@/components/ui/AdSlot';
 
 export const metadata: Metadata = {
   title: 'Audio Transcripts | ChatFiles.org - Ghislaine Maxwell Proffer Sessions',
@@ -94,7 +93,6 @@ export default function AudioPage() {
       </div>
 
       {/* Ad Banner */}
-      <AdBanner className="py-4 bg-gray-100" />
 
       <div className="max-w-6xl mx-auto px-4 py-10">
         {/* Participants Card */}

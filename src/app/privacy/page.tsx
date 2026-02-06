@@ -1,5 +1,4 @@
 import { Metadata } from 'next';
-import { AdBanner } from '@/components/ui/AdSlot';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy | ChatFiles.org',
@@ -9,7 +8,6 @@ export const metadata: Metadata = {
 export default function PrivacyPolicyPage() {
   return (
     <div className="min-h-screen bg-gray-50">
-      <AdBanner className="py-4 bg-gray-100" />
       <div className="max-w-4xl mx-auto px-4 py-12">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Privacy Policy</h1>
         <p className="text-gray-500 mb-8">Last updated: February 2026</p>

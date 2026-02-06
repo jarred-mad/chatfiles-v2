@@ -4,7 +4,6 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useState, useEffect, Suspense, useMemo } from 'react';
 import Link from 'next/link';
 import SearchBar from '@/components/ui/SearchBar';
-import AdSlot, { AdBanner } from '@/components/ui/AdSlot';
 import { notableNames, getCategoryInfo, type NotablePerson } from '@/lib/notable-names';
 
 interface SearchResult {
@@ -256,7 +255,6 @@ function SearchContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top Ad Banner */}
-      <AdBanner id="search-top" className="bg-white border-b" />
 
       {/* Search Header */}
       <div className="bg-white border-b border-gray-200 py-6">
@@ -356,7 +354,6 @@ function SearchContent() {
               </div>
 
               {/* Ad slot */}
-              <AdSlot size="sidebar" id="search-sidebar" className="hidden lg:block" />
             </div>
           </aside>
 
@@ -497,7 +494,6 @@ function SearchContent() {
                     {/* Ad every 5th result on mobile */}
                     {(index + 1) % 5 === 0 && (
                       <div className="my-4 flex justify-center lg:hidden">
-                        <AdSlot size="incontent" id={`search-inline-${index}`} />
                       </div>
                     )}
                   </div>
