@@ -190,6 +190,18 @@ function SearchContent() {
           setTotal(data.total);
           setTotalPages(data.totalPages);
           setProcessingTime(data.processingTimeMs);
+
+          // Track search for analytics (only on first page to avoid duplicates)
+          if (query && page === 1 && data.total > 0) {
+            fetch('/api/recent-searches', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                searchTerm: query,
+                resultCount: data.total,
+              }),
+            }).catch(() => {}); // Fire and forget
+          }
         }
       } catch (error) {
         console.error('Search error:', error);
