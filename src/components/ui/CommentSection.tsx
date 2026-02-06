@@ -37,6 +37,7 @@ export default function CommentSection({ pageId, pageType = 'page' }: CommentSec
 
   useEffect(() => {
     fetchComments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageId, pageType]);
 
   const handleSubmit = async (e: React.FormEvent) => {
