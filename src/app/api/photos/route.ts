@@ -29,8 +29,8 @@ interface ImageRow {
 }
 
 // Map frontend filter IDs to database scene_type values
+// Note: 'people' filter uses has_faces=true, not scene_type
 const SCENE_TYPE_MAP: Record<string, string[]> = {
-  people: ['a photograph of people'],
   mansion: ['a mansion or estate', 'a house or residential building'],
   yacht: ['a yacht or boat'],
   airplane: ['an airplane interior'],
@@ -38,7 +38,7 @@ const SCENE_TYPE_MAP: Record<string, string[]> = {
   party: ['a party or social gathering', 'a formal event or gala'],
   documents: ['a scanned document or letter', 'a handwritten note', 'a legal document', 'a fax or printed communication'],
   office: ['an office or workplace', 'a meeting or conference'],
-  bedroom: ['a hotel room or bedroom'],
+  bedroom: ['a hotel room or bedroom', 'a living room or lounge'],
   pool: ['a pool or swimming area'],
   dining: ['a restaurant or dining area'],
 };
@@ -81,12 +81,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Scene type filter
-    if (scene && scene !== 'all' && SCENE_TYPE_MAP[scene]) {
-      const sceneTypes = SCENE_TYPE_MAP[scene];
-      const placeholders = sceneTypes.map((_, i) => `$${paramIndex + i}`).join(', ');
-      conditions.push(`(ei.scene_type IN (${placeholders}) OR ei.document_type_class IN (${placeholders}))`);
-      params.push(...sceneTypes);
-      paramIndex += sceneTypes.length;
+    if (scene && scene !== 'all') {
+      if (scene === 'people') {
+        // "People" filter uses has_faces = true for images with detected faces
+        conditions.push(`ei.has_faces = true`);
+      } else if (SCENE_TYPE_MAP[scene]) {
+        const sceneTypes = SCENE_TYPE_MAP[scene];
+        const placeholders = sceneTypes.map((_, i) => `$${paramIndex + i}`).join(', ');
+        conditions.push(`(ei.scene_type IN (${placeholders}) OR ei.document_type_class IN (${placeholders}))`);
+        params.push(...sceneTypes);
+        paramIndex += sceneTypes.length;
+      }
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
