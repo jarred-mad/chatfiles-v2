@@ -8,6 +8,7 @@ import SearchBar from '../ui/SearchBar';
 
 const languages = [
   { code: 'en', label: 'English', flag: '🇺🇸' },
+  { code: 'ar', label: 'العربية', flag: '🇸🇦' },
   { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
   { code: 'es', label: 'Español', flag: '🇪🇸' },
   { code: 'fr', label: 'Français', flag: '🇫🇷' },
@@ -83,6 +84,7 @@ export default function Header() {
     // Map our language codes to Google Translate codes
     const googleLangMap: Record<string, string> = {
       'en': 'en',
+      'ar': 'ar',
       'de': 'de',
       'es': 'es',
       'fr': 'fr',
