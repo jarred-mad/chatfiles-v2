@@ -276,7 +276,7 @@ export default async function Home() {
               {peoplePhotos.map((photo) => (
                 <Link
                   key={photo.id}
-                  href={`/documents/${photo.document_id}`}
+                  href="/photos?type=people"
                   className="aspect-square bg-gray-200 rounded overflow-hidden hover:opacity-90 transition-opacity"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
