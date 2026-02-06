@@ -342,27 +342,24 @@ export default async function DocumentPage({ params }: PageProps) {
                 </h3>
                 <div className="grid grid-cols-2 gap-2">
                   {doc.extracted_images.slice(0, 6).map((img) => (
-                    <div
+                    <Link
                       key={img.id}
-                      className="aspect-square bg-gray-100 rounded relative overflow-hidden"
+                      href={`/photos/${img.id}`}
+                      className="aspect-square bg-gray-100 rounded relative overflow-hidden group cursor-pointer"
                     >
                       {img.file_path_r2 && (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={img.file_path_r2.startsWith('http') ? img.file_path_r2 : `${R2_PUBLIC_URL}/${img.file_path_r2}`}
                           alt={`Image from page ${img.page}`}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                         />
                       )}
-                      {img.has_faces && (
-                        <span className="absolute top-1 right-1 bg-accent text-white text-xs px-1 rounded">
-                          Face
-                        </span>
-                      )}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
                       <span className="absolute bottom-1 left-1 text-xs text-white bg-black/50 px-1 rounded">
                         p.{img.page}
                       </span>
-                    </div>
+                    </Link>
                   ))}
                 </div>
                 {doc.extracted_images.length > 6 && (

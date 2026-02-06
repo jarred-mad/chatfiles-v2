@@ -54,9 +54,37 @@ export default function ArticlesPage() {
     }
   };
 
-  // Get featured article (first one marked as featured, or first article)
-  const featuredArticle = articles.find(a => a.is_featured) || articles[0];
-  const otherArticles = articles.filter(a => a.id !== featuredArticle?.id);
+  // Shuffle articles based on visit count for returning users
+  const shuffleWithSeed = (arr: Article[], seed: number) => {
+    const shuffled = [...arr];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor((Math.abs(Math.sin(seed + i) * 10000)) % (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  // Get visit count from localStorage and shuffle articles
+  const [displayArticles, setDisplayArticles] = useState<Article[]>([]);
+
+  useEffect(() => {
+    if (articles.length === 0) return;
+
+    // Get and increment visit count
+    const visitCount = parseInt(localStorage.getItem('articles_visit_count') || '0', 10);
+    localStorage.setItem('articles_visit_count', String(visitCount + 1));
+
+    // Shuffle based on visit count (different order each visit)
+    const shuffled = shuffleWithSeed(articles, visitCount);
+    setDisplayArticles(shuffled);
+  }, [articles]);
+
+  // Use shuffled articles if available, otherwise use original order
+  const articlesToShow = displayArticles.length > 0 ? displayArticles : articles;
+
+  // Get featured article (first one marked as featured, or first from shuffled list)
+  const featuredArticle = articlesToShow.find(a => a.is_featured) || articlesToShow[0];
+  const otherArticles = articlesToShow.filter(a => a.id !== featuredArticle?.id);
 
   return (
     <div className="min-h-screen bg-gray-50">
