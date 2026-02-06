@@ -154,6 +154,10 @@ export async function GET(request: NextRequest) {
       page,
       totalPages: Math.ceil(total / limit),
       processingTimeMs: Date.now() - startTime,
+    }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+      },
     });
   } catch (error) {
     console.error('Search error:', error);
