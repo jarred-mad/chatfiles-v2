@@ -7,12 +7,14 @@ let adCounter = 0;
 const getAdId = () => `ad-${++adCounter}-${Date.now()}`;
 
 // Default AdSlot
-export default function AdSlot({ className = '', id: _id, size: _size }: { className?: string; id?: string; size?: string }) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function AdSlot({ className = '', id, size }: { className?: string; id?: string; size?: string }) {
   return <LeaderboardAd className={className} />;
 }
 
 // AdBanner - shows leaderboard on desktop, mobile banner on mobile
-export function AdBanner({ className = '', id: _id }: { className?: string; id?: string }) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function AdBanner({ className = '', id }: { className?: string; id?: string }) {
   return (
     <div className={className}>
       <div className="hidden md:flex justify-center">
@@ -26,7 +28,8 @@ export function AdBanner({ className = '', id: _id }: { className?: string; id?:
 }
 
 // InContentAd - for in-article/in-page ads
-export function InContentAd({ className = '', id: _id }: { className?: string; id?: string }) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function InContentAd({ className = '', id }: { className?: string; id?: string }) {
   return <BannerAd468 className={className} />;
 }
 
