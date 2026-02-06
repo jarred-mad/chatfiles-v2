@@ -19,13 +19,6 @@ interface VideoResponse {
   totalPages: number;
 }
 
-function formatDuration(seconds: number | null): string {
-  if (!seconds) return '--:--';
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
 function formatFileSize(bytes: number | null): string {
   if (!bytes) return '';
   if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(1)} GB`;
