@@ -209,35 +209,6 @@ function PhotosContent() {
             </div>
           </div>
 
-          {/* View Toggle */}
-          <div className="flex gap-2 mt-4">
-            <button
-              onClick={() => {
-                setViewMode('gallery');
-                setPage(1);
-              }}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'gallery'
-                  ? 'bg-navy text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Gallery View
-            </button>
-            <button
-              onClick={() => {
-                setViewMode('by-person');
-                setPage(1);
-              }}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                viewMode === 'by-person'
-                  ? 'bg-navy text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              By Person
-            </button>
-          </div>
         </div>
       </div>
 
