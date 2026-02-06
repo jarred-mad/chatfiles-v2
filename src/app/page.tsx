@@ -3,7 +3,7 @@
 import Link from "next/link";
 import SearchBar from "@/components/ui/SearchBar";
 import { query } from "@/lib/database";
-import { AdBanner, InContentAd, HilltopAdBanner1, HilltopAdBanner2, HilltopAdBanner3 } from "@/components/ui/AdSlot";
+// Ads are now integrated directly into photo and article grids
 import RecentlySearched from "@/components/ui/RecentlySearched";
 
 // 100 Notable individuals from the DOJ Epstein Files
@@ -286,7 +286,36 @@ export default async function Home() {
               </Link>
             </div>
             <div className="grid grid-cols-4 md:grid-cols-4 gap-2">
-              {peoplePhotos.map((photo) => (
+              {peoplePhotos.slice(0, 7).map((photo) => (
+                <Link
+                  key={photo.id}
+                  href="/photos?type=people"
+                  className="aspect-square bg-gray-200 rounded overflow-hidden hover:opacity-90 transition-opacity"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photo.image_url}
+                    alt="Photo from documents"
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </Link>
+              ))}
+              {/* LootFinder Ad - blends with photos */}
+              <a
+                href="https://www.LootFinder.xyz"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="aspect-square bg-[#0d1521] rounded overflow-hidden hover:opacity-90 transition-opacity flex items-center justify-center"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/lootfinder-ad.png"
+                  alt="LootFinder.xyz"
+                  className="w-full h-full object-cover"
+                />
+              </a>
+              {peoplePhotos.slice(7, 11).map((photo) => (
                 <Link
                   key={photo.id}
                   href="/photos?type=people"
@@ -346,17 +375,6 @@ export default async function Home() {
           </div>
         </div>
       </section>
-
-      {/* Ad Banner */}
-      <AdBanner className="bg-gray-100 py-4" />
-
-      {/* HilltopAds */}
-      <div className="bg-gray-50 py-4">
-        <div className="max-w-6xl mx-auto px-4 flex flex-wrap justify-center gap-4">
-          <HilltopAdBanner1 />
-          <HilltopAdBanner2 />
-        </div>
-      </div>
 
       {/* Stats Bar */}
       <section className="bg-white border-b border-gray-200 py-6">
@@ -435,14 +453,6 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* In-Content Ad */}
-      <div className="bg-gray-50 py-4">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col items-center gap-4">
-          <InContentAd />
-          <HilltopAdBanner3 />
-        </div>
-      </div>
-
       {/* How It Works */}
       <section className="py-12 bg-white">
         <div className="max-w-6xl mx-auto px-4">
@@ -500,7 +510,49 @@ export default async function Home() {
               </Link>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {recentArticles.map((article) => (
+              {recentArticles.slice(0, 3).map((article) => (
+                <Link key={article.slug} href={`/articles/${article.slug}`} className="card card-hover overflow-hidden">
+                  <div className="h-32 bg-gray-100 relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={article.image_url || '/images/placeholder.jpg'}
+                      alt={article.person_name}
+                      className="w-full h-full object-cover"
+                    />
+                    <span className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                      {article.category}
+                    </span>
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-medium text-gray-900 text-sm line-clamp-2">{article.title}</h3>
+                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">{article.summary}</p>
+                  </div>
+                </Link>
+              ))}
+              {/* LootFinder Ad - styled like an article card */}
+              <a
+                href="https://www.LootFinder.xyz"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="card card-hover overflow-hidden"
+              >
+                <div className="h-32 bg-[#0d1521] relative flex items-center justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/images/lootfinder-ad.png"
+                    alt="LootFinder.xyz"
+                    className="w-full h-full object-cover"
+                  />
+                  <span className="absolute top-2 left-2 bg-emerald-500 text-white text-xs px-2 py-1 rounded">
+                    Sponsored
+                  </span>
+                </div>
+                <div className="p-4 bg-[#0d1521]">
+                  <h3 className="font-medium text-white text-sm line-clamp-2">Discover Your Hidden Loot</h3>
+                  <p className="text-xs text-gray-400 mt-1 line-clamp-2">Find unclaimed money that belongs to you</p>
+                </div>
+              </a>
+              {recentArticles.slice(3, 7).map((article) => (
                 <Link key={article.slug} href={`/articles/${article.slug}`} className="card card-hover overflow-hidden">
                   <div className="h-32 bg-gray-100 relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
