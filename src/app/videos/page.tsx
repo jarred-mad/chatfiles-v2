@@ -7,16 +7,13 @@ import { AdBanner } from '@/components/ui/AdSlot';
 interface Video {
   id: string;
   filename: string;
-  title: string;
-  description: string | null;
-  duration: number | null;
-  url: string | null;
-  thumbnail: string | null;
-  fileSize: number | null;
+  file_path: string | null;
+  file_size_bytes: number;
+  dataset_number: number;
 }
 
 interface VideoResponse {
-  results: Video[];
+  videos: Video[];
   total: number;
   page: number;
   totalPages: number;
@@ -52,11 +49,12 @@ export default function VideosPage() {
     try {
       const res = await fetch(`/api/videos?page=${page}&limit=24`);
       const data: VideoResponse = await res.json();
-      setVideos(data.results);
-      setTotalPages(data.totalPages);
-      setTotal(data.total);
+      setVideos(data.videos || []);
+      setTotalPages(data.totalPages || 1);
+      setTotal(data.total || 0);
     } catch (err) {
       console.error('Failed to fetch videos:', err);
+      setVideos([]);
     } finally {
       setLoading(false);
     }
@@ -111,15 +109,10 @@ export default function VideosPage() {
                 >
                   {/* Thumbnail */}
                   <div className="aspect-video bg-gray-900 relative flex items-center justify-center">
-                    {video.thumbnail ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <svg className="w-16 h-16 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    )}
+                    <svg className="w-16 h-16 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                     {/* Play overlay */}
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
@@ -128,23 +121,17 @@ export default function VideosPage() {
                         </svg>
                       </div>
                     </div>
-                    {/* Duration badge */}
-                    {video.duration && (
-                      <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
-                        {formatDuration(video.duration)}
-                      </div>
-                    )}
                   </div>
 
                   {/* Info */}
                   <div className="p-4">
-                    <h3 className="font-medium text-gray-900 truncate">{video.title}</h3>
+                    <h3 className="font-medium text-gray-900 truncate">{video.filename}</h3>
                     <div className="flex items-center gap-2 mt-2 text-sm text-gray-500">
-                      <span>{video.id}</span>
-                      {video.fileSize && (
+                      <span>Dataset {video.dataset_number}</span>
+                      {video.file_size_bytes > 0 && (
                         <>
                           <span>•</span>
-                          <span>{formatFileSize(video.fileSize)}</span>
+                          <span>{formatFileSize(video.file_size_bytes)}</span>
                         </>
                       )}
                     </div>
