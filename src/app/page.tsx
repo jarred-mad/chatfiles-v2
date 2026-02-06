@@ -293,6 +293,47 @@ export default async function Home() {
         </section>
       )}
 
+      {/* New Videos Section */}
+      <section className="py-8 bg-white border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">New Videos Uploaded</h2>
+              <p className="text-sm text-gray-500">More videos being processed - check back soon!</p>
+            </div>
+            <Link href="/videos" className="text-accent hover:text-accent-hover text-sm font-medium">
+              View All Videos &rarr;
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {['EFTA01648540', 'EFTA01648528', 'EFTA01648532', 'EFTA01648572'].map((videoId) => (
+              <Link
+                key={videoId}
+                href={`/videos/${videoId}`}
+                className="group relative aspect-video bg-gray-900 rounded-lg overflow-hidden hover:ring-2 hover:ring-accent transition-all"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`${R2_PUBLIC_URL}/thumbnails/${videoId}.jpg`}
+                  alt={`Video ${videoId}`}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition-colors">
+                  <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center">
+                    <svg className="w-5 h-5 text-gray-900 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                </div>
+                <span className="absolute bottom-2 left-2 text-xs text-white bg-black/60 px-2 py-1 rounded">
+                  {videoId}.mp4
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Ad Banner */}
       <AdBanner className="bg-gray-100 py-4" />
 

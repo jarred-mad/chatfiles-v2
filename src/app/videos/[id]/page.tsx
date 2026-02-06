@@ -12,12 +12,9 @@ const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL?.trim() || 'https://pub-e8b8792b
 interface VideoRow {
   id: string;
   filename: string;
-  title: string | null;
-  description: string | null;
-  duration_seconds: number | null;
   file_path_r2: string | null;
-  file_size_bytes: string | null;
-  created_at: string;
+  file_size_bytes: number | null;
+  dataset_number: number;
 }
 
 interface PageProps {
@@ -28,13 +25,6 @@ function getFullUrl(path: string | null): string | null {
   if (!path) return null;
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
   return `${R2_PUBLIC_URL}/${path}`;
-}
-
-function formatDuration(seconds: number | null): string {
-  if (!seconds) return '--:--';
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 function formatFileSize(bytes: number | null): string {
@@ -49,7 +39,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   try {
     const result = await query<VideoRow>(
-      'SELECT title, filename, description FROM videos WHERE id = $1',
+      `SELECT filename FROM documents WHERE id = $1 AND document_type = 'video'`,
       [id]
     );
 
@@ -59,8 +49,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
 
     return {
-      title: `${video.title || video.filename} | ChatFiles.org Videos`,
-      description: video.description || `Video ${video.filename} from the DOJ Epstein Files`,
+      title: `${video.filename} | ChatFiles.org Videos`,
+      description: `Video ${video.filename} from the DOJ Epstein Files`,
     };
   } catch {
     return { title: 'Video | ChatFiles.org' };
@@ -74,8 +64,8 @@ export default async function VideoPage({ params }: PageProps) {
 
   try {
     const result = await query<VideoRow>(
-      `SELECT id, filename, title, description, duration_seconds, file_path_r2, file_size_bytes, created_at
-       FROM videos WHERE id = $1`,
+      `SELECT id, filename, file_path_r2, file_size_bytes, dataset_number
+       FROM documents WHERE id = $1 AND document_type = 'video'`,
       [id]
     );
     video = result[0] || null;
@@ -88,7 +78,8 @@ export default async function VideoPage({ params }: PageProps) {
   }
 
   const videoUrl = getFullUrl(video.file_path_r2);
-  const fileSize = video.file_size_bytes ? parseInt(video.file_size_bytes, 10) : null;
+  const fileSize = video.file_size_bytes;
+  const thumbnailUrl = `${R2_PUBLIC_URL}/thumbnails/${id}.jpg`;
 
   return (
     <div className="min-h-screen bg-gray-900">
@@ -100,9 +91,10 @@ export default async function VideoPage({ params }: PageProps) {
               controls
               autoPlay
               className="w-full aspect-video"
-              poster=""
+              poster={thumbnailUrl}
             >
               <source src={videoUrl} type="video/mp4" />
+              <source src={videoUrl} type="video/quicktime" />
               <source src={videoUrl} type="video/x-msvideo" />
               Your browser does not support the video tag.
             </video>
@@ -121,15 +113,12 @@ export default async function VideoPage({ params }: PageProps) {
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="bg-gray-800 rounded-lg p-6">
           <h1 className="text-2xl font-bold text-white mb-4">
-            {video.title || video.filename}
+            {video.filename}
           </h1>
 
           <div className="flex flex-wrap gap-4 text-gray-400 text-sm mb-6">
-            <span className="flex items-center gap-1">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {formatDuration(video.duration_seconds)}
+            <span className="bg-gray-700 px-3 py-1 rounded">
+              Dataset {video.dataset_number}
             </span>
             {fileSize && (
               <span className="flex items-center gap-1">
@@ -146,10 +135,6 @@ export default async function VideoPage({ params }: PageProps) {
               {video.id}
             </span>
           </div>
-
-          {video.description && (
-            <p className="text-gray-300 mb-6">{video.description}</p>
-          )}
 
           {/* Actions */}
           <div className="flex flex-wrap gap-3">
