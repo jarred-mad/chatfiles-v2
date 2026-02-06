@@ -37,16 +37,6 @@ interface Dataset {
 const PHOTO_TYPE_BUTTONS = [
   { id: 'all', label: 'All Photos', icon: '📷' },
   { id: 'people', label: 'People', icon: '👥' },
-  { id: 'mansion', label: 'Mansions', icon: '🏛️' },
-  { id: 'yacht', label: 'Yachts', icon: '🛥️' },
-  { id: 'airplane', label: 'Airplanes', icon: '✈️' },
-  { id: 'island', label: 'Islands', icon: '🏝️' },
-  { id: 'party', label: 'Parties', icon: '🎉' },
-  { id: 'documents', label: 'Documents', icon: '📄' },
-  { id: 'office', label: 'Offices', icon: '🏢' },
-  { id: 'bedroom', label: 'Bedrooms', icon: '🛏️' },
-  { id: 'pool', label: 'Pools', icon: '🏊' },
-  { id: 'dining', label: 'Dining', icon: '🍽️' },
 ];
 
 function PhotosContent() {
