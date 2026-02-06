@@ -4,7 +4,7 @@ export default function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-400">
       {/* LootFinder Ad */}
-      <div className="bg-[#0d1521] py-6 border-b border-gray-800">
+      <div className="bg-[#0d1521] py-3 border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 flex justify-center">
           <a
             href="https://www.LootFinder.xyz"
@@ -16,8 +16,8 @@ export default function Footer() {
             <img
               src="/images/lootfinder-ad.png"
               alt="LootFinder.xyz - Discover Your Hidden Loot"
-              className="max-w-full h-auto rounded-lg shadow-lg"
-              style={{ maxWidth: '450px' }}
+              className="max-w-full h-auto rounded"
+              style={{ maxWidth: '280px' }}
             />
           </a>
         </div>

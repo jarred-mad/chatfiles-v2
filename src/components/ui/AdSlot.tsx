@@ -243,10 +243,10 @@ export function MobileBannerAd({ className = '' }: { className?: string }) {
   );
 }
 
-// LootFinder Ad - Static image ad
+// LootFinder Ad - Static image ad (compact version)
 export function LootFinderAd({ className = '' }: { className?: string }) {
   return (
-    <div className={`flex justify-center my-4 ${className}`}>
+    <div className={`flex justify-center my-2 ${className}`}>
       <a
         href="https://www.LootFinder.xyz"
         target="_blank"
@@ -257,8 +257,8 @@ export function LootFinderAd({ className = '' }: { className?: string }) {
         <img
           src="/images/lootfinder-ad.png"
           alt="LootFinder.xyz - Discover Your Hidden Loot"
-          className="max-w-full h-auto rounded-lg shadow-lg"
-          style={{ maxWidth: '500px' }}
+          className="max-w-full h-auto rounded"
+          style={{ maxWidth: '250px' }}
         />
       </a>
     </div>
