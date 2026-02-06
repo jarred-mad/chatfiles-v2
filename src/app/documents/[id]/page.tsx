@@ -74,6 +74,21 @@ async function getDocument(id: string) {
       [doc.dataset_number, id]
     );
 
+    // Fetch previous and next documents (by filename order in same dataset)
+    const prevDoc = await query<{ id: string }>(
+      `SELECT id FROM documents
+       WHERE dataset_number = $1 AND filename < $2
+       ORDER BY filename DESC LIMIT 1`,
+      [doc.dataset_number, doc.filename]
+    );
+
+    const nextDoc = await query<{ id: string }>(
+      `SELECT id FROM documents
+       WHERE dataset_number = $1 AND filename > $2
+       ORDER BY filename ASC LIMIT 1`,
+      [doc.dataset_number, doc.filename]
+    );
+
     // Construct full R2 URL for the PDF
     let pdfUrl = doc.file_path_r2;
     if (pdfUrl && !pdfUrl.startsWith('http')) {
@@ -106,6 +121,8 @@ async function getDocument(id: string) {
         filename: r.filename,
         dataset_number: r.dataset_number,
       })),
+      prev_id: prevDoc[0]?.id || null,
+      next_id: nextDoc[0]?.id || null,
     };
   } catch (error) {
     console.error('Database error:', error);
@@ -155,6 +172,56 @@ export default async function DocumentPage({ params }: PageProps) {
             <span className="mx-2">/</span>
             <span className="text-gray-900 truncate max-w-xs">{doc.filename}</span>
           </nav>
+        </div>
+      </div>
+
+      {/* Navigation Bar */}
+      <div className="bg-gray-100 border-b border-gray-200 py-2">
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {doc.prev_id ? (
+              <Link
+                href={`/documents/${doc.prev_id}`}
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium text-gray-700"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Previous
+              </Link>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-md text-sm text-gray-400 cursor-not-allowed">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Previous
+              </span>
+            )}
+            {doc.next_id ? (
+              <Link
+                href={`/documents/${doc.next_id}`}
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-sm font-medium text-gray-700"
+              >
+                Next
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-md text-sm text-gray-400 cursor-not-allowed">
+                Next
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </span>
+            )}
+          </div>
+          <Link
+            href="/photos?type=people"
+            className="text-sm text-accent hover:text-accent-hover font-medium"
+          >
+            Back to Photos
+          </Link>
         </div>
       </div>
 
