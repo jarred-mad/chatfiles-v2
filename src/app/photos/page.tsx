@@ -1,4 +1,5 @@
 'use client';
+// Build: 2026-02-05-v2
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
