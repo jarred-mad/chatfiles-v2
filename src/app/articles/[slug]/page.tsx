@@ -113,12 +113,9 @@ export default async function ArticlePage({ params }: PageProps) {
             <div className="relative h-72 md:h-96 bg-gray-900 rounded-t-xl overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={article.image_url}
+                src={article.image_url || '/images/placeholder.jpg'}
                 alt={article.person_name}
                 className="w-full h-full object-contain"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/images/placeholder.jpg';
-                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-6">
@@ -306,12 +303,9 @@ export default async function ArticlePage({ params }: PageProps) {
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={art.image_url}
+                        src={art.image_url || '/images/placeholder.jpg'}
                         alt={art.person_name}
                         className="w-10 h-10 rounded-full object-cover bg-gray-200 flex-shrink-0"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/images/placeholder.jpg';
-                        }}
                       />
                       <div className="flex-1 min-w-0">
                         <div className={`text-sm font-medium truncate ${
