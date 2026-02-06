@@ -235,14 +235,8 @@ export default async function DocumentPage({ params }: PageProps) {
             {/* Transcription */}
             {doc.text_content && (
               <div className="bg-white rounded-lg shadow-sm">
-                <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+                <div className="border-b border-gray-200 px-4 py-3">
                   <h2 className="font-semibold text-gray-900">OCR Transcription</h2>
-                  <button
-                    className="text-sm text-accent hover:text-accent-hover"
-                    onClick={() => navigator.clipboard?.writeText(doc.text_content)}
-                  >
-                    Copy Text
-                  </button>
                 </div>
                 <div className="p-4 max-h-[600px] overflow-y-auto">
                   <pre className="whitespace-pre-wrap font-mono text-sm text-gray-700 leading-relaxed">
