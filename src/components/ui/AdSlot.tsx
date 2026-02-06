@@ -243,13 +243,35 @@ export function MobileBannerAd({ className = '' }: { className?: string }) {
   );
 }
 
-// Placeholder components for removed HilltopAds (return null to avoid breaking imports)
+// LootFinder Ad - Static image ad
+export function LootFinderAd({ className = '' }: { className?: string }) {
+  return (
+    <div className={`flex justify-center my-4 ${className}`}>
+      <a
+        href="https://www.LootFinder.xyz"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block hover:opacity-90 transition-opacity"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/images/lootfinder-ad.png"
+          alt="LootFinder.xyz - Discover Your Hidden Loot"
+          className="max-w-full h-auto rounded-lg shadow-lg"
+          style={{ maxWidth: '500px' }}
+        />
+      </a>
+    </div>
+  );
+}
+
+// Placeholder components for removed HilltopAds (now use LootFinder)
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function HilltopAdBanner1({ className = '' }: { className?: string }) { return null; }
+export function HilltopAdBanner1({ className = '' }: { className?: string }) { return <LootFinderAd className={className} />; }
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function HilltopAdBanner2({ className = '' }: { className?: string }) { return null; }
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function HilltopAdBanner3({ className = '' }: { className?: string }) { return null; }
+export function HilltopAdBanner3({ className = '' }: { className?: string }) { return <LootFinderAd className={className} />; }
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function HilltopAdBanner4({ className = '' }: { className?: string }) { return null; }
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
