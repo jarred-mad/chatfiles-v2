@@ -114,6 +114,35 @@ async function getRecentArticles() {
   }
 }
 
+const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL?.trim() || 'https://pub-e8b8792b476a4216b2cbd491f9d61af0.r2.dev';
+
+async function getPeoplePhotos() {
+  try {
+    const photos = await query<{
+      id: string;
+      document_id: string;
+      file_path_r2: string;
+    }>(
+      `SELECT ei.id, ei.document_id, ei.file_path_r2
+       FROM extracted_images ei
+       WHERE ei.file_path_r2 IS NOT NULL
+         AND (
+           ei.document_type_class = 'a photograph of people'
+           OR EXISTS (SELECT 1 FROM faces f WHERE f.image_id = ei.id)
+         )
+       ORDER BY (SELECT COUNT(*) FROM faces f WHERE f.image_id = ei.id) DESC
+       LIMIT 12`
+    );
+    return photos.map(p => ({
+      id: p.id,
+      document_id: p.document_id,
+      image_url: p.file_path_r2.startsWith('http') ? p.file_path_r2 : `${R2_PUBLIC_URL}/${p.file_path_r2}`,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 function formatNumber(num: number): string {
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
   if (num >= 1000) return `${(num / 1000).toFixed(0)}K+`;
@@ -123,6 +152,7 @@ function formatNumber(num: number): string {
 export default async function Home() {
   const stats = await getStats();
   const recentArticles = await getRecentArticles();
+  const peoplePhotos = await getPeoplePhotos();
 
   // Build collections from real data
   const collections = [
@@ -231,6 +261,37 @@ export default async function Home() {
           <RecentlySearched />
         </div>
       </section>
+
+      {/* People Photos Grid */}
+      {peoplePhotos.length > 0 && (
+        <section className="py-8 bg-gray-50 border-b border-gray-200">
+          <div className="max-w-6xl mx-auto px-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Photos of People</h2>
+              <Link href="/photos?type=people" className="text-accent hover:text-accent-hover text-sm font-medium">
+                View All &rarr;
+              </Link>
+            </div>
+            <div className="grid grid-cols-4 md:grid-cols-4 gap-2">
+              {peoplePhotos.map((photo) => (
+                <Link
+                  key={photo.id}
+                  href={`/documents/${photo.document_id}`}
+                  className="aspect-square bg-gray-200 rounded overflow-hidden hover:opacity-90 transition-opacity"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photo.image_url}
+                    alt="Photo from documents"
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Ad Banner */}
       <AdBanner className="bg-gray-100 py-4" />
