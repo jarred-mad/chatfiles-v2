@@ -25,7 +25,7 @@ const readline = require('readline');
 const NEW_FILES_LIST = path.join(__dirname, 'results', 'new-files.txt');
 const PROGRESS_FILE = path.join(__dirname, 'results', 'upload-progress.json');
 const ERROR_LOG = path.join(__dirname, 'results', 'upload-errors.txt');
-const CONCURRENCY = 10; // Parallel uploads
+const CONCURRENCY = 50; // Parallel uploads (increased for speed)
 const RETRY_ATTEMPTS = 3;
 
 // R2 Client

@@ -257,7 +257,7 @@ function PhotosContent() {
                 >
                   All Datasets
                 </button>
-                {datasets.map((ds) => (
+                {datasets.filter(ds => ds.number !== 0).map((ds) => (
                   <button
                     key={ds.number}
                     onClick={() => {

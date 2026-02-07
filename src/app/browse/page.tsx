@@ -82,7 +82,7 @@ export default async function BrowsePage() {
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-4">By Data Set</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {data.datasets.map((ds) => (
+              {data.datasets.filter(ds => ds.number !== 0).map((ds) => (
                 <Link
                   key={ds.number}
                   href={`/search?datasets=${ds.number}`}
