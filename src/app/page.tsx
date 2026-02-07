@@ -1,5 +1,5 @@
-// Deploy trigger: 2026-02-05-v2
-// Build trigger: 2026-02-05-v1
+// Deploy trigger: 2026-02-06-v2
+// Build trigger: 2026-02-06-ads-removed
 import Link from "next/link";
 import SearchBar from "@/components/ui/SearchBar";
 import { query } from "@/lib/database";
